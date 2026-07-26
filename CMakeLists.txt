@@ -11,24 +11,11 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-include_directories(include)
-
 find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(Threads REQUIRED)
 
-add_executable(
-    nifdu
-    src/main.cpp
-    src/agent3.cpp
-    src/telemetry.cpp
-    src/realtime.cpp
-    src/lang_adapter.cpp
-    src/lang_graph.cpp
-    src/lang_smith.cpp
-    src/pakistan_payments.cpp
-    src/http_server.cpp
-)
+add_executable(nifdu src/main.cpp)
 
 target_compile_options(
     nifdu
@@ -46,23 +33,15 @@ target_link_libraries(
     Threads::Threads
 )
 
-add_executable(
-    test_pakistan_payments
-    tests/test_pakistan_payments.cpp
-    src/agent3.cpp
-    src/telemetry.cpp
-    src/realtime.cpp
-    src/lang_adapter.cpp
-    src/lang_graph.cpp
-    src/lang_smith.cpp
-    src/pakistan_payments.cpp
-    src/http_server.cpp
-)
-
-target_link_libraries(
-    test_pakistan_payments
-    PRIVATE
-    CURL::libcurl
-    nlohmann_json::nlohmann_json
-    Threads::Threads
-)
+include(CTest)
+if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pakistan_payments.cpp")
+    add_executable(test_pakistan_payments tests/test_pakistan_payments.cpp)
+    target_link_libraries(
+        test_pakistan_payments
+        PRIVATE
+        CURL::libcurl
+        nlohmann_json::nlohmann_json
+        Threads::Threads
+    )
+    add_test(NAME pakistan_payments COMMAND test_pakistan_payments)
+endif()
