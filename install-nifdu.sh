@@ -15,6 +15,10 @@ die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
 
 if [ -n "${TERMUX_VERSION:-}" ] || [ -d "$TERMUX_SYS_PREFIX" ]; then
   IS_TERMUX=1
+  # Termux patches CMake to read $PREFIX/include/android/api-level.h.
+  # Correct it immediately so every subprocess sees the real Termux prefix.
+  export PREFIX="$TERMUX_SYS_PREFIX"
+  export CMAKE_PREFIX_PATH="$TERMUX_SYS_PREFIX"
 fi
 
 if [ -z "$JOBS" ]; then
@@ -62,14 +66,12 @@ git clone --depth 1 --branch "$REF" "$REPO_URL" "$SRC_DIR"
 
 log "Configuring NIFDU"
 if [ "$IS_TERMUX" -eq 1 ]; then
-  # CMake's Android detection reads $PREFIX/include/android/api-level.h.
-  # Force Termux's system prefix even if the caller has PREFIX=~/.local exported.
-  env PREFIX="$TERMUX_SYS_PREFIX" \
-      CMAKE_PREFIX_PATH="$TERMUX_SYS_PREFIX" \
-      cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_C_COMPILER="$TERMUX_SYS_PREFIX/bin/clang" \
-      -DCMAKE_CXX_COMPILER="$TERMUX_SYS_PREFIX/bin/clang++"
+  printf 'Termux PREFIX: %s\n' "$PREFIX"
+  [ -f "$PREFIX/include/android/api-level.h" ] || die "Missing Termux Android header: $PREFIX/include/android/api-level.h"
+  cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER="$PREFIX/bin/clang" \
+    -DCMAKE_CXX_COMPILER="$PREFIX/bin/clang++"
 else
   cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release
 fi
