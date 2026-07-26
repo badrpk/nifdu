@@ -30,32 +30,42 @@ fi
 
 install_deps() {
   if [ "$IS_TERMUX" -eq 1 ]; then
-    log "Installing Termux build dependencies"
+    log "Installing Termux build and browser dependencies"
     pkg update -y
     pkg install -y git cmake ninja clang pkg-config libcurl nlohmann-json
+
+    if ! command -v chromium >/dev/null 2>&1; then
+      log "Enabling Termux X11 repository"
+      pkg install -y x11-repo
+      pkg update -y
+      log "Installing Chromium for headless visual validation"
+      pkg install -y chromium
+    fi
+
+    command -v chromium >/dev/null 2>&1 || die "Chromium installation failed. Run: pkg install x11-repo && pkg install chromium"
   elif command -v apt-get >/dev/null 2>&1; then
     log "Installing Debian/Ubuntu build dependencies"
     local SUDO=""
     [ "$(id -u)" -eq 0 ] || SUDO="sudo"
     command -v sudo >/dev/null 2>&1 || [ "$(id -u)" -eq 0 ] || die "Install sudo or run as root."
     $SUDO apt-get update
-    $SUDO apt-get install -y git cmake ninja-build g++ pkg-config libcurl4-openssl-dev nlohmann-json3-dev ca-certificates
+    $SUDO apt-get install -y git cmake ninja-build g++ pkg-config libcurl4-openssl-dev nlohmann-json3-dev ca-certificates chromium
   elif command -v dnf >/dev/null 2>&1; then
     log "Installing Fedora/RHEL build dependencies"
     local SUDO=""
     [ "$(id -u)" -eq 0 ] || SUDO="sudo"
-    $SUDO dnf install -y git cmake ninja-build gcc-c++ libcurl-devel json-devel ca-certificates
+    $SUDO dnf install -y git cmake ninja-build gcc-c++ libcurl-devel json-devel ca-certificates chromium
   elif command -v pacman >/dev/null 2>&1; then
     log "Installing Arch Linux build dependencies"
     local SUDO=""
     [ "$(id -u)" -eq 0 ] || SUDO="sudo"
-    $SUDO pacman -Syu --needed --noconfirm git cmake ninja gcc curl nlohmann-json ca-certificates
+    $SUDO pacman -Syu --needed --noconfirm git cmake ninja gcc curl nlohmann-json ca-certificates chromium
   elif [ "$(uname -s)" = "Darwin" ]; then
     command -v brew >/dev/null 2>&1 || die "Homebrew is required on macOS: https://brew.sh"
     log "Installing macOS build dependencies"
     brew install git cmake ninja curl nlohmann-json
   else
-    die "Unsupported platform. Install git, CMake, Ninja, a C++20 compiler, libcurl and nlohmann-json, then rerun."
+    die "Unsupported platform. Install git, CMake, Ninja, a C++20 compiler, libcurl, nlohmann-json and Chromium, then rerun."
   fi
 }
 
@@ -99,7 +109,6 @@ if [ "$IS_TERMUX" -eq 1 ]; then
   cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_TESTING=OFF \
-    -DCMAKE_C_COMPILER="$PREFIX/bin/clang" \
     -DCMAKE_CXX_COMPILER="$PREFIX/bin/clang++"
 else
   cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
@@ -147,6 +156,20 @@ if [ -z "${GEMINI_API_KEY:-}" ]; then
   export GEMINI_API_KEY="$key"
 fi
 
+if command -v chromium >/dev/null 2>&1; then
+  export NIFDU_CHROMIUM="${NIFDU_CHROMIUM:-chromium}"
+elif command -v chromium-browser >/dev/null 2>&1; then
+  export NIFDU_CHROMIUM="${NIFDU_CHROMIUM:-chromium-browser}"
+else
+  printf 'Chromium is required for visual validation.\n' >&2
+  if [ -d /data/data/com.termux/files/usr ]; then
+    printf 'Install it with: pkg install x11-repo && pkg install chromium\n' >&2
+  else
+    printf 'Install Chromium using your system package manager.\n' >&2
+  fi
+  exit 1
+fi
+
 if [ "$#" -eq 0 ]; then
   printf '\nNIFDU is ready. What should I build?\n> '
   request=""
@@ -167,4 +190,5 @@ log "Verifying installation"
 printf '\nNIFDU installed successfully.\n'
 printf 'Launcher  : %s/bin/nifdu\n' "$INSTALL_PREFIX"
 printf 'Executable: %s/bin/nifdu-bin\n' "$INSTALL_PREFIX"
+printf 'Browser   : %s\n' "$(command -v chromium || command -v chromium-browser)"
 printf 'Run now   : nifdu\n'
