@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 REPO_URL="https://github.com/badrpk/nifdu.git"
 REF="${NIFDU_REF:-master}"
-PREFIX="${NIFDU_PREFIX:-$HOME/.local}"
+INSTALL_PREFIX="${NIFDU_PREFIX:-$HOME/.local}"
 SRC_DIR="${NIFDU_SRC_DIR:-$HOME/.cache/nifdu-src}"
 BUILD_DIR="$SRC_DIR/build"
 JOBS="${NIFDU_JOBS:-}"
@@ -66,21 +66,21 @@ for candidate in "$BUILD_DIR/nifdu" "$BUILD_DIR/bin/nifdu" "$SRC_DIR/bin/nifdu";
 done
 [ -n "$BIN" ] || die "Build completed but the nifdu executable was not found."
 
-log "Installing to $PREFIX/bin/nifdu"
-mkdir -p "$PREFIX/bin"
-install -m 0755 "$BIN" "$PREFIX/bin/nifdu"
+log "Installing to $INSTALL_PREFIX/bin/nifdu"
+mkdir -p "$INSTALL_PREFIX/bin"
+install -m 0755 "$BIN" "$INSTALL_PREFIX/bin/nifdu"
 
 case ":$PATH:" in
-  *":$PREFIX/bin:"*) ;;
+  *":$INSTALL_PREFIX/bin:"*) ;;
   *)
     printf '\nAdd this line to your shell profile, then restart the terminal:\n'
-    printf '  export PATH="%s/bin:$PATH"\n' "$PREFIX"
+    printf '  export PATH="%s/bin:$PATH"\n' "$INSTALL_PREFIX"
     ;;
 esac
 
 log "Verifying installation"
-"$PREFIX/bin/nifdu" --help >/dev/null 2>&1 || true
+"$INSTALL_PREFIX/bin/nifdu" --help >/dev/null 2>&1 || true
 
 printf '\nNIFDU installed successfully.\n'
-printf 'Executable: %s/bin/nifdu\n' "$PREFIX"
-printf 'Run: %s/bin/nifdu --help\n' "$PREFIX"
+printf 'Executable: %s/bin/nifdu\n' "$INSTALL_PREFIX"
+printf 'Run: %s/bin/nifdu --help\n' "$INSTALL_PREFIX"
