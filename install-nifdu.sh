@@ -7,9 +7,15 @@ INSTALL_PREFIX="${NIFDU_PREFIX:-$HOME/.local}"
 SRC_DIR="${NIFDU_SRC_DIR:-$HOME/.cache/nifdu-src}"
 BUILD_DIR="$SRC_DIR/build"
 JOBS="${NIFDU_JOBS:-}"
+IS_TERMUX=0
+TERMUX_SYS_PREFIX="/data/data/com.termux/files/usr"
 
 log() { printf '\n==> %s\n' "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
+
+if [ -n "${TERMUX_VERSION:-}" ] || [ -d "$TERMUX_SYS_PREFIX" ]; then
+  IS_TERMUX=1
+fi
 
 if [ -z "$JOBS" ]; then
   if command -v nproc >/dev/null 2>&1; then JOBS="$(nproc)";
@@ -18,7 +24,7 @@ if [ -z "$JOBS" ]; then
 fi
 
 install_deps() {
-  if [ -n "${TERMUX_VERSION:-}" ] || [ -d /data/data/com.termux/files/usr ]; then
+  if [ "$IS_TERMUX" -eq 1 ]; then
     log "Installing Termux build dependencies"
     pkg update -y
     pkg install -y git cmake ninja clang pkg-config libcurl nlohmann-json
@@ -55,7 +61,18 @@ rm -rf "$SRC_DIR"
 git clone --depth 1 --branch "$REF" "$REPO_URL" "$SRC_DIR"
 
 log "Configuring NIFDU"
-cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release
+if [ "$IS_TERMUX" -eq 1 ]; then
+  # CMake's Android detection reads $PREFIX/include/android/api-level.h.
+  # Force Termux's system prefix even if the caller has PREFIX=~/.local exported.
+  env PREFIX="$TERMUX_SYS_PREFIX" \
+      CMAKE_PREFIX_PATH="$TERMUX_SYS_PREFIX" \
+      cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER="$TERMUX_SYS_PREFIX/bin/clang" \
+      -DCMAKE_CXX_COMPILER="$TERMUX_SYS_PREFIX/bin/clang++"
+else
+  cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release
+fi
 
 log "Building NIFDU"
 cmake --build "$BUILD_DIR" --parallel "$JOBS"
