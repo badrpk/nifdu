@@ -1,74 +1,68 @@
 cmake_minimum_required(VERSION 3.20)
-project(nifdu LANGUAGES CXX)
 
-add_compile_definitions(
-    TOML_HEADER_ONLY=1
-    _ALLOW_COMPILER_AND_STL_VERSION_MISMATCH
+project(
+    nifdu
+    VERSION 2.0.0
+    DESCRIPTION "Autonomous C++ visual product supervisor & NIFDU Core Engine"
+    LANGUAGES CXX
 )
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_TOOLCHAIN_FILE "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-    CACHE FILEPATH "vcpkg toolchain"
+include_directories(include)
+
+find_package(CURL REQUIRED)
+find_package(nlohmann_json REQUIRED)
+find_package(Threads REQUIRED)
+
+add_executable(
+    nifdu
+    src/main.cpp
+    src/agent3.cpp
+    src/telemetry.cpp
+    src/realtime.cpp
+    src/lang_adapter.cpp
+    src/lang_graph.cpp
+    src/lang_smith.cpp
+    src/pakistan_payments.cpp
+    src/http_server.cpp
 )
 
-if (MSVC)
-    add_compile_options(/Zc:char8_t /bigobj)
-    add_compile_definitions(_WIN32_WINNT=0x0A00 WIN32_LEAN_AND_MEAN)
-endif()
-
-find_package(Boost CONFIG REQUIRED COMPONENTS system filesystem thread)
-find_package(OpenSSL REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
-find_package(tomlplusplus CONFIG REQUIRED)
-
-add_executable(nifdu
-    src/main.cpp src/truth_engine.cpp src/lead_api_shim.cpp
-    src/nifdu_ai_client.cpp
-    src/nifdu_routes.cpp
-    src/nifdu_platform.cpp
-
-    src/ai/engine.cpp
-    src/ai/av_engine.cpp
-
-    src/http/api_chat.cpp
-    src/http/handlers_ai.cpp
+target_compile_options(
+    nifdu
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
 )
 
-target_link_libraries(nifdu PRIVATE
-    Boost::system
-    Boost::filesystem
-    Boost::thread
-    OpenSSL::SSL
-    OpenSSL::Crypto
-    C:/vcpkg/installed/x64-windows/lib/libpq.lib
+target_link_libraries(
+    nifdu
+    PRIVATE
+    CURL::libcurl
     nlohmann_json::nlohmann_json
+    Threads::Threads
 )
 
-target_include_directories(nifdu PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
+add_executable(
+    test_pakistan_payments
+    tests/test_pakistan_payments.cpp
+    src/agent3.cpp
+    src/telemetry.cpp
+    src/realtime.cpp
+    src/lang_adapter.cpp
+    src/lang_graph.cpp
+    src/lang_smith.cpp
+    src/pakistan_payments.cpp
+    src/http_server.cpp
 )
 
-# REMOVED BROKEN AV target_sources (will use real config later)
-
-
-
-
-
-
-# NIFDU AV sprite handler
-target_sources(nifdu PRIVATE src/http/api_av_sprite.cpp)
-
-
-# NIFDU AV control handler
-target_sources(nifdu PRIVATE src/http/api_av_control.cpp)
-
-
-
-
-
-
-
-
-
+target_link_libraries(
+    test_pakistan_payments
+    PRIVATE
+    CURL::libcurl
+    nlohmann_json::nlohmann_json
+    Threads::Threads
+)
