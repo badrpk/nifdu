@@ -3,22 +3,21 @@ set -Eeuo pipefail
 
 REPO_URL="https://github.com/badrpk/nifdu.git"
 REF="${NIFDU_REF:-master}"
-INSTALL_PREFIX="${NIFDU_PREFIX:-$HOME/.local}"
 SRC_DIR="${NIFDU_SRC_DIR:-$HOME/.cache/nifdu-src}"
 BUILD_DIR="$SRC_DIR/build"
 JOBS="${NIFDU_JOBS:-}"
 IS_TERMUX=0
 TERMUX_SYS_PREFIX="/data/data/com.termux/files/usr"
+INSTALL_PREFIX="${NIFDU_PREFIX:-$HOME/.local}"
 
 log() { printf '\n==> %s\n' "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
 
 if [ -n "${TERMUX_VERSION:-}" ] || [ -d "$TERMUX_SYS_PREFIX" ]; then
   IS_TERMUX=1
-  # Termux patches CMake to read $PREFIX/include/android/api-level.h.
-  # Correct it immediately so every subprocess sees the real Termux prefix.
   export PREFIX="$TERMUX_SYS_PREFIX"
   export CMAKE_PREFIX_PATH="$TERMUX_SYS_PREFIX"
+  INSTALL_PREFIX="${NIFDU_PREFIX:-$TERMUX_SYS_PREFIX}"
 fi
 
 if [ -z "$JOBS" ]; then
@@ -70,36 +69,26 @@ if [ "$IS_TERMUX" -eq 1 ]; then
   [ -f "$PREFIX/include/android/api-level.h" ] || die "Missing Termux Android header: $PREFIX/include/android/api-level.h"
   cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_TESTING=OFF \
     -DCMAKE_C_COMPILER="$PREFIX/bin/clang" \
     -DCMAKE_CXX_COMPILER="$PREFIX/bin/clang++"
 else
-  cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release
+  cmake -S "$SRC_DIR" -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
 fi
 
 log "Building NIFDU"
-cmake --build "$BUILD_DIR" --parallel "$JOBS"
+cmake --build "$BUILD_DIR" --target nifdu --parallel "$JOBS"
 
-BIN=""
-for candidate in "$BUILD_DIR/nifdu" "$BUILD_DIR/bin/nifdu" "$SRC_DIR/bin/nifdu"; do
-  if [ -x "$candidate" ]; then BIN="$candidate"; break; fi
-done
-[ -n "$BIN" ] || die "Build completed but the nifdu executable was not found."
+BIN="$BUILD_DIR/nifdu"
+[ -x "$BIN" ] || die "Build completed but $BIN was not created."
 
 log "Installing to $INSTALL_PREFIX/bin/nifdu"
 mkdir -p "$INSTALL_PREFIX/bin"
 install -m 0755 "$BIN" "$INSTALL_PREFIX/bin/nifdu"
-
-case ":$PATH:" in
-  *":$INSTALL_PREFIX/bin:"*) ;;
-  *)
-    printf '\nAdd this line to your shell profile, then restart the terminal:\n'
-    printf '  export PATH="%s/bin:$PATH"\n' "$INSTALL_PREFIX"
-    ;;
-esac
 
 log "Verifying installation"
 "$INSTALL_PREFIX/bin/nifdu" --help >/dev/null 2>&1 || true
 
 printf '\nNIFDU installed successfully.\n'
 printf 'Executable: %s/bin/nifdu\n' "$INSTALL_PREFIX"
-printf 'Run: %s/bin/nifdu --help\n' "$INSTALL_PREFIX"
+printf 'Run: nifdu --help\n'
