@@ -28,23 +28,60 @@ if [ -z "$JOBS" ]; then
   else JOBS=2; fi
 fi
 
+find_chromium() {
+  local candidate=""
+  for candidate in \
+    "${NIFDU_CHROMIUM:-}" \
+    "$(command -v chromium 2>/dev/null || true)" \
+    "$(command -v chromium-browser 2>/dev/null || true)" \
+    "$(command -v google-chrome 2>/dev/null || true)" \
+    "$TERMUX_SYS_PREFIX/bin/chromium" \
+    "$TERMUX_SYS_PREFIX/bin/chromium-browser" \
+    "$TERMUX_SYS_PREFIX/lib/chromium/chromium" \
+    "$TERMUX_SYS_PREFIX/lib/chromium-browser/chromium-browser" \
+    "/usr/bin/chromium" \
+    "/usr/bin/chromium-browser" \
+    "/Applications/Chromium.app/Contents/MacOS/Chromium"
+  do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  if command -v dpkg >/dev/null 2>&1; then
+    candidate="$(dpkg -L chromium 2>/dev/null | awk '/\/(chromium|chromium-browser)$/ {print; exit}')"
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 install_deps() {
   stage 1 "Checking and installing dependencies"
   if [ "$IS_TERMUX" -eq 1 ]; then
     pkg update -y
     pkg install -y git cmake ninja clang pkg-config libcurl nlohmann-json
-    hash -r
+    hash -r 2>/dev/null || true
 
-    if [ ! -x "$TERMUX_SYS_PREFIX/bin/chromium" ] && ! command -v chromium >/dev/null 2>&1; then
+    if ! find_chromium >/dev/null 2>&1; then
       printf '\nInstalling Chromium visual-validation engine...\n'
       pkg install -y x11-repo
       pkg update -y
       pkg install -y chromium
-      hash -r
+      hash -r 2>/dev/null || true
     fi
 
-    [ -x "$TERMUX_SYS_PREFIX/bin/chromium" ] || command -v chromium >/dev/null 2>&1 || \
-      die "Chromium package completed but its executable was not found."
+    CHROMIUM_BIN="$(find_chromium || true)"
+    [ -n "$CHROMIUM_BIN" ] || {
+      printf '\nChromium package files:\n' >&2
+      dpkg -L chromium 2>/dev/null | grep -E '/(chromium|chrome)(-browser)?$' >&2 || true
+      die "Chromium is installed but NIFDU could not locate an executable."
+    }
+    printf 'Chromium detected: %s\n' "$CHROMIUM_BIN"
   elif command -v apt-get >/dev/null 2>&1; then
     local SUDO=""
     [ "$(id -u)" -eq 0 ] || SUDO="sudo"
@@ -61,7 +98,8 @@ install_deps() {
     $SUDO pacman -Syu --needed --noconfirm git cmake ninja gcc curl nlohmann-json ca-certificates chromium
   elif [ "$(uname -s)" = "Darwin" ]; then
     command -v brew >/dev/null 2>&1 || die "Homebrew is required on macOS."
-    brew install git cmake ninja curl nlohmann-json --cask chromium
+    brew install git cmake ninja curl nlohmann-json
+    brew install --cask chromium
   else
     die "Unsupported platform."
   fi
@@ -133,36 +171,56 @@ TERMUX_PREFIX="/data/data/com.termux/files/usr"
 
 progress() { printf '\n[NIFDU] %s\n' "$*"; }
 
+find_chromium() {
+  local candidate=""
+  for candidate in \
+    "${NIFDU_CHROMIUM:-}" \
+    "$(command -v chromium 2>/dev/null || true)" \
+    "$(command -v chromium-browser 2>/dev/null || true)" \
+    "$(command -v google-chrome 2>/dev/null || true)" \
+    "$TERMUX_PREFIX/bin/chromium" \
+    "$TERMUX_PREFIX/bin/chromium-browser" \
+    "$TERMUX_PREFIX/lib/chromium/chromium" \
+    "$TERMUX_PREFIX/lib/chromium-browser/chromium-browser" \
+    "/usr/bin/chromium" \
+    "/usr/bin/chromium-browser" \
+    "/Applications/Chromium.app/Contents/MacOS/Chromium"
+  do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  if command -v dpkg >/dev/null 2>&1; then
+    candidate="$(dpkg -L chromium 2>/dev/null | awk '/\/(chromium|chromium-browser)$/ {print; exit}')"
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 [ -x "$REAL_BIN" ] || { printf 'NIFDU executable is missing: %s\n' "$REAL_BIN" >&2; exit 1; }
 
 progress "Stage 1/5: Checking runtime dependencies"
 hash -r 2>/dev/null || true
 
-if [ -d "$TERMUX_PREFIX" ]; then
-  if [ ! -x "$TERMUX_PREFIX/bin/chromium" ] && ! command -v chromium >/dev/null 2>&1; then
-    progress "Chromium is missing; installing it automatically"
-    pkg install -y x11-repo
-    pkg update -y
-    pkg install -y chromium
-    hash -r 2>/dev/null || true
-  fi
-
-  if [ -x "$TERMUX_PREFIX/bin/chromium" ]; then
-    export NIFDU_CHROMIUM="${NIFDU_CHROMIUM:-$TERMUX_PREFIX/bin/chromium}"
-  elif command -v chromium >/dev/null 2>&1; then
-    export NIFDU_CHROMIUM="${NIFDU_CHROMIUM:-$(command -v chromium)}"
-  else
-    printf 'Chromium could not be installed automatically.\n' >&2
-    exit 1
-  fi
-elif command -v chromium >/dev/null 2>&1; then
-  export NIFDU_CHROMIUM="${NIFDU_CHROMIUM:-$(command -v chromium)}"
-elif command -v chromium-browser >/dev/null 2>&1; then
-  export NIFDU_CHROMIUM="${NIFDU_CHROMIUM:-$(command -v chromium-browser)}"
-else
-  printf 'Chromium is required. Install it using your system package manager.\n' >&2
-  exit 1
+CHROMIUM_BIN="$(find_chromium || true)"
+if [ -z "$CHROMIUM_BIN" ] && [ -d "$TERMUX_PREFIX" ]; then
+  progress "Chromium is missing; installing it automatically"
+  pkg install -y x11-repo
+  pkg update -y
+  pkg install -y chromium
+  hash -r 2>/dev/null || true
+  CHROMIUM_BIN="$(find_chromium || true)"
 fi
+
+[ -n "$CHROMIUM_BIN" ] || { printf 'Chromium could not be located after automatic installation.\n' >&2; exit 1; }
+export NIFDU_CHROMIUM="$CHROMIUM_BIN"
+printf 'Browser: %s\n' "$NIFDU_CHROMIUM"
 
 progress "Stage 2/5: Loading API credentials"
 if [ -z "${GEMINI_API_KEY:-}" ] && [ -s "$API_KEY_FILE" ]; then
@@ -183,7 +241,7 @@ if [ -z "${GEMINI_API_KEY:-}" ]; then
   export GEMINI_API_KEY="$key"
 fi
 
-progress "Stage 3/5: Selecting the latest production Flash model"
+progress "Stage 3/5: Selecting Gemini 3.6 Flash"
 export NIFDU_BUILDER_MODEL="${NIFDU_BUILDER_MODEL:-gemini-3.6-flash}"
 export NIFDU_JUDGE_MODEL="${NIFDU_JUDGE_MODEL:-$NIFDU_BUILDER_MODEL}"
 printf 'Builder model: %s\nJudge model  : %s\n' "$NIFDU_BUILDER_MODEL" "$NIFDU_JUDGE_MODEL"
@@ -212,9 +270,5 @@ stage 8 "Installation complete"
 printf 'Launcher  : %s/bin/nifdu\n' "$INSTALL_PREFIX"
 printf 'Executable: %s/bin/nifdu-bin\n' "$INSTALL_PREFIX"
 printf 'Model     : gemini-3.6-flash\n'
-if [ "$IS_TERMUX" -eq 1 ] && [ -x "$TERMUX_SYS_PREFIX/bin/chromium" ]; then
-  printf 'Browser   : %s\n' "$TERMUX_SYS_PREFIX/bin/chromium"
-else
-  printf 'Browser   : %s\n' "$(command -v chromium || command -v chromium-browser || true)"
-fi
+printf 'Browser   : %s\n' "$(find_chromium || true)"
 printf 'Run now   : nifdu\n'
