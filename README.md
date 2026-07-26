@@ -12,7 +12,7 @@
 
 ## ⚡ What is NIFDU?
 
-**NIFDU** is an ultra-high performance, compiled **C++20 Autonomous AI Agent Engine, SIMD Spatial GIS Processor, and Multi-Gateway Financial Settlement Infrastructure**. 
+**NIFDU** is an ultra-high performance, compiled **C++20 Autonomous AI Agent Engine, SIMD Spatial GIS Processor, and Multi-Gateway Financial Settlement Infrastructure**.
 
 Designed as a sub-millisecond replacement for heavy Python agent frameworks (like LangGraph, CrewAI, and AutoGen), NIFDU operates with **`< 1 ms` execution latency**, **8 MB RAM footprint**, and **zero memory leak stability** across 100,000+ continuous recursion loops.
 
@@ -66,34 +66,39 @@ NIFDU was evaluated head-to-head against **LangGraph** across 10 of the most com
 
 ## 📥 Downloads & Installation
 
-### 1-Line Quick Install (Linux / macOS)
+### Reliable 1-Line Install (Termux / Linux / macOS)
+
+The installer is served directly from GitHub, so it does not depend on the Xerus web server or its TLS configuration.
+
 ```bash
-curl -fsSL https://www.xerus.biz/download/install-nifdu.sh | bash
+curl -fsSL https://raw.githubusercontent.com/badrpk/nifdu/master/install-nifdu.sh | bash
 ```
 
-### Direct Download Packages
-- 🐧 **Linux x86_64 Binary:** [`nifdu-v2.0.0-linux-amd64.tar.gz`](https://www.xerus.biz/download/nifdu-v2.0.0-linux-amd64.tar.gz)
-- 🪟 **Windows x64 Binary:** [`nifdu-v2.0.0-windows-x64.zip`](https://www.xerus.biz/download/nifdu-v2.0.0-windows-x64.zip)
+The script installs required build tools, downloads the latest source, builds NIFDU natively for the current architecture, and installs it to `~/.local/bin/nifdu`.
+
+### Review Before Running
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/badrpk/nifdu/master/install-nifdu.sh -o install-nifdu.sh
+less install-nifdu.sh
+bash install-nifdu.sh
+```
 
 ### Build from Source (CMake & C++20)
+
 ```bash
-# Clone the repository
 git clone https://github.com/badrpk/nifdu.git
 cd nifdu
-
-# Build with CMake
-mkdir -p build && cd build
-cmake ..
-make nifdu -j$(nproc)
-
-# Run test suite
-./nifdu --help
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+./build/nifdu --help
 ```
 
 ---
 
 ## 📄 License & Ecosystem
 Built under the **MIT License** as part of the **badrpk Software Ecosystem**.
+
 Contributions, issues, and pull requests are welcome!
 
 Copyright © 2026 **NIFDU Product Engine** • Hosted on [www.xerus.biz](https://www.xerus.biz)
