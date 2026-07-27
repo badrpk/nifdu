@@ -1,10 +1,10 @@
 # NIFDU Benchmark Programme
 
-This document records the reproducible product-generation comparison between NIFDU and a small LangGraph workflow.
+This document records reproducible product-generation results for NIFDU and, where available, a small LangGraph comparison workflow.
 
 ## Fairness rules
 
-Every test should use:
+Every direct comparison should use:
 
 - the same Gemini model;
 - the same product prompt;
@@ -34,17 +34,17 @@ A fatal HTML or JavaScript failure must score below 50.
 | # | Product task | Main capabilities tested |
 |---|---|---|
 | 1 | Scientific calculator | Mathematical correctness, scientific functions, history, keyboard and mobile controls |
-| 2 | Snake game | Animation, game state, collision rules, scoring, restart and touch controls |
-| 3 | Synonym quiz | Question flow, answer checking, feedback, scoring and replay |
-| 4 | 900-word news editor | Word count, progress, copy, clear and local autosave |
-| 5 | Kanban board | Create, update, delete, drag-and-drop and persistence |
+| 2 | Spreadsheet engine | Formula parsing, dependency recalculation, circular-reference handling, editing, persistence and CSV |
+| 3 | Snake game | Animation, game state, collision rules, scoring, restart and touch controls |
+| 4 | Synonym quiz | Question flow, answer checking, feedback, scoring and replay |
+| 5 | Kanban board | Create, update, delete, drag-and-drop, filtering and persistence |
 | 6 | Markdown editor | Editing, live preview, formatting and persistence |
 | 7 | Chess game | Rule complexity, move validation, turn state and interface quality |
 | 8 | Drawing application | Canvas input, tools, undo, clear and export |
 | 9 | Weather dashboard | API use, loading state, failure handling and responsive presentation |
 | 10 | Expense tracker | Forms, calculations, categories, charts and persistence |
 
-## Recorded result: Test 1
+## Recorded result: Scientific calculator
 
 Prompt:
 
@@ -70,11 +70,46 @@ Judge reason:
 
 The generated NIFDU calculator was then served locally and manually checked in a mobile browser. A sample calculation, `95 × 65`, returned `6175`, and the responsive scientific interface loaded successfully.
 
+## Recorded result: Spreadsheet engine
+
+Prompt summary:
+
+> Build a compact self-contained browser spreadsheet in one HTML file with a 30-row by 20-column editable grid, cell references, arithmetic formulas, SUM, AVERAGE, MIN, MAX, IF, dependent-cell recalculation, circular-reference detection, copy, paste, delete, undo, CSV import/export, local autosave, mobile controls and at least 20 built-in automated tests.
+
+Environment:
+
+- Android Termux
+- Gemini 3.6 Flash builder and independent judge
+- NIFDU Termux fast mode
+- Maximum two quality loops
+- Large-product continuation protection enabled
+
+Result:
+
+| System | Iterations | Critical issues | Unmet requirements | Judge score | Outcome |
+|---|---:|---:|---:|---:|---|
+| NIFDU | **1** | **0** | **0** | **92/100** | Accepted |
+| LangGraph workflow | Not yet run | — | — | — | Pending |
+
+The independent judge reported that the generated single-file spreadsheet included a custom formula engine with range support and error handling, local save/load, CSV import/export, formatting tools, column resizing, keyboard navigation, status statistics and a canvas chart generator.
+
+A manual Android-browser check confirmed that the spreadsheet rendered correctly with its grid, formula bar, mobile toolbar, sample budget data, formatting controls and CSV controls visible and usable.
+
+This result is recorded as a NIFDU product-generation result, not yet as a direct NIFDU-versus-LangGraph victory because the equivalent LangGraph run remains pending.
+
+## Current NIFDU scorecard
+
+| Completed task | Score | Accepted | First iteration |
+|---|---:|---:|---:|
+| Scientific calculator | 98/100 | Yes | Yes |
+| Spreadsheet engine | 92/100 | Yes | Yes |
+| **Total** | **190/200** | **2/2** | **2/2** |
+
 ## Interpretation
 
-This result demonstrates that NIFDU decisively won the first tested product-generation task on completeness and judged quality. LangGraph completed its orchestration sooner, but its candidate was invalid.
+The completed tests show that NIFDU can produce valid, high-scoring single-file browser applications on Android Termux. The spreadsheet result also provides evidence that the large-product continuation changes addressed the earlier truncation failure for this workload.
 
-This single test does **not** establish a universal performance advantage. A meaningful overall conclusion requires completion of the full ten-test suite and repeated runs to account for model variance and network latency.
+These results do **not** establish a universal performance advantage. A meaningful overall conclusion requires completion of the full ten-test suite, equivalent comparison runs and repeated trials to account for model variance and network latency.
 
 ## Final report format
 
