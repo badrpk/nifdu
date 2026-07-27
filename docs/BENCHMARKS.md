@@ -97,17 +97,43 @@ A manual Android-browser check confirmed that the spreadsheet rendered correctly
 
 This result is recorded as a NIFDU product-generation result, not yet as a direct NIFDU-versus-LangGraph victory because the equivalent LangGraph run remains pending.
 
+## Recorded result: Offline Kanban board
+
+Prompt summary:
+
+> Build a production-quality offline Kanban project-management application in one self-contained HTML file with multiple projects, five workflow columns, full task CRUD, duplication, drag-and-drop and reordering, task metadata, search and filtering, progress statistics, activity history, undo/redo, local autosave, JSON import/export, keyboard shortcuts, mobile touch controls, accidental-data-loss protection, realistic sample data and at least 20 built-in automated self-tests.
+
+Environment:
+
+- Android Termux
+- Gemini 3.6 Flash builder and independent judge
+- NIFDU Termux fast mode
+- Maximum two quality loops
+- Large-product continuation protection enabled
+
+Result:
+
+| System | Iterations | Critical issues | Unmet requirements | Judge score | Outcome |
+|---|---:|---:|---:|---:|---|
+| NIFDU | **1** | **0** | **0** | **92/100** | Accepted |
+| LangGraph workflow | Not yet run | — | — | — | Pending |
+
+The independent judge described the generated app as a feature-complete offline Kanban system with project switching, customisable columns and WIP limits, drag-and-drop, task checklists and progress indicators, tag and priority filters, search, analytics, theme switching, and local data import/export.
+
+This result is recorded as a NIFDU product-generation result. A direct LangGraph comparison for this prompt remains pending.
+
 ## Current NIFDU scorecard
 
 | Completed task | Score | Accepted | First iteration |
 |---|---:|---:|---:|
 | Scientific calculator | 98/100 | Yes | Yes |
 | Spreadsheet engine | 92/100 | Yes | Yes |
-| **Total** | **190/200** | **2/2** | **2/2** |
+| Offline Kanban board | 92/100 | Yes | Yes |
+| **Total** | **282/300** | **3/3** | **3/3** |
 
 ## Interpretation
 
-The completed tests show that NIFDU can produce valid, high-scoring single-file browser applications on Android Termux. The spreadsheet result also provides evidence that the large-product continuation changes addressed the earlier truncation failure for this workload.
+The completed tests show that NIFDU can produce valid, high-scoring single-file browser applications on Android Termux. The spreadsheet and Kanban results also provide evidence that the large-product continuation changes addressed the earlier truncation failure for these workloads.
 
 These results do **not** establish a universal performance advantage. A meaningful overall conclusion requires completion of the full ten-test suite, equivalent comparison runs and repeated trials to account for model variance and network latency.
 
