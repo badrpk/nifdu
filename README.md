@@ -1,104 +1,143 @@
-# 🚀 NIFDU: Sub-Millisecond C++20 Autonomous AI Agent Engine & Multi-Gateway Infrastructure
+# NIFDU — Autonomous C++20 AI Product Builder
 
 <p align="center">
   <img src="https://img.shields.io/badge/C%2B%2B-20-00599C?style=for-the-badge&logo=cplusplus&logoColor=white" alt="C++20"/>
-  <img src="https://img.shields.io/badge/Speed-19.6x%20Faster%20than%20LangGraph-10B981?style=for-the-badge" alt="Speed"/>
-  <img src="https://img.shields.io/badge/Memory-8MB%20RAM-6366F1?style=for-the-badge" alt="Memory"/>
-  <img src="https://img.shields.io/badge/License-MIT-F59E0B?style=for-the-badge" alt="License"/>
-  <img src="https://img.shields.io/badge/Build-100%25%20Passing-10B981?style=for-the-badge" alt="Build Status"/>
+  <img src="https://img.shields.io/badge/Termux-Ready-10B981?style=for-the-badge&logo=android&logoColor=white" alt="Termux Ready"/>
+  <img src="https://img.shields.io/badge/Gemini-Autonomous%20Build-6366F1?style=for-the-badge" alt="Gemini Autonomous Build"/>
+  <img src="https://img.shields.io/badge/License-MIT-F59E0B?style=for-the-badge" alt="MIT License"/>
 </p>
 
----
+## What NIFDU does
 
-## ⚡ What is NIFDU?
+NIFDU is a native C++20 autonomous product builder. Give it a plain-English request and it will:
 
-**NIFDU** is an ultra-high performance, compiled **C++20 Autonomous AI Agent Engine, SIMD Spatial GIS Processor, and Multi-Gateway Financial Settlement Infrastructure**.
+1. generate a complete browser application;
+2. launch a local preview;
+3. evaluate the result with an independent AI judge;
+4. repair the product when required;
+5. save the final HTML and a JSON evaluation report.
 
-Designed as a sub-millisecond replacement for heavy Python agent frameworks (like LangGraph, CrewAI, and AutoGen), NIFDU operates with **`< 1 ms` execution latency**, **8 MB RAM footprint**, and **zero memory leak stability** across 100,000+ continuous recursion loops.
+It is designed to run directly on Linux and Android through Termux, without requiring a heavy Python agent runtime for its main product loop.
 
----
+## Verified examples
 
-## 🌐 Live Product Hub & Demonstration
+Recent Termux runs produced these accepted applications:
 
-- **Live Web Portal & AI Playground:** [https://www.xerus.biz](https://www.xerus.biz)
-- **Repository Documentation:** [https://github.com/badrpk/nifdu](https://github.com/badrpk/nifdu)
-- **Deployed Ecosystem Marketplace:** [https://www.xerus.biz/laibabadar/](https://www.xerus.biz/laibabadar/)
+| Product | Judge score | Iterations | Result |
+|---|---:|---:|---|
+| Scientific calculator | **96/100** | 1 | Accepted |
+| Snake game | **95/100** | 1 | Accepted |
 
----
+The generated calculator included scientific functions, history, memory controls, keyboard support and a responsive mobile interface. The generated Snake game included multiple modes, mobile controls, scoring and persistent statistics.
 
-## 🌟 Key Features & Utilities
+## NIFDU vs LangGraph: first reproducible product test
 
-### 1. 🤖 Sub-Millisecond Autonomous AI Agent Core
-- **19.6x Faster than LangGraph:** Replaces heavy Python state graphs with compiled C++20 state machines.
-- **Infinite Safe Looping:** Executes **100,000+ continuous autonomous self-correction loops** with zero stack overflow crashes and zero memory leaks (**4.5 MB RAM** vs 1.24 GB in Python).
-- **Zero-Token SIMD Prompt Compression:** Uses hardware-level SIMD registers to parse 100KB JSON payload schemas directly into binary structs in under $1\text{ ms}$.
+A blind benchmark used the same Gemini model and the same scientific-calculator prompt for both systems.
 
-### 2. 💳 Pakistan Multi-Gateway Financial Settlement Engine
-- **Pre-Built C++ SDK:** Native drivers for **SBP Raast** (`03212558089`), **JazzCash**, **Easypaisa**, **UPaisa**, and **Credit Cards**.
-- **Instant Settlement:** Sub-second payment authorization, transaction logging, and automated receipt generation.
+| System | Time | Valid product | Blind judge score |
+|---|---:|---:|---:|
+| **NIFDU** | 96.5 s | Yes | **98/100** |
+| LangGraph workflow | 77.5 s | No | 0/100 |
 
-### 3. 🗺️ High-Throughput PostGIS Telemetry Engine
-- **SIMD Spatial Edge Processor:** Processes **1,000,000+ GPS telemetry points/sec** for PostGIS polygon edge calculations, electric grid monitoring ([bijli](https://github.com/badrpk/bijli)), and CPEC 2.0 asset tracking.
+**Winner for this test: NIFDU.**
 
-### 4. 📹 WebRTC Real-Time Media Gateway
-- **Sub-Millisecond HMAC Auth:** Instant HMAC-SHA256 STUN/TURN credential generation for 1,000+ concurrent WebRTC video calling channels.
+The LangGraph workflow completed faster but returned no valid implementation. This is one recorded product-generation test, not a universal claim that NIFDU is faster or better for every workload. The full 10-test suite and methodology are documented in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
 
----
+## Termux fast mode
 
-## 🏆 Benchmark Results: NIFDU vs LangGraph
+On Android, headless Chromium capture can be unreliable and slow. NIFDU detects Termux and skips those screenshot attempts while preserving:
 
-NIFDU was evaluated head-to-head against **LangGraph** across 10 of the most complex autonomous AI agent engineering workloads:
+- local browser preview;
+- HTML evidence collection;
+- independent judging;
+- repair iterations;
+- final product and report generation.
 
-| Task # | Task Description | NIFDU Latency | LangGraph Latency | Speedup Factor | Winner |
-|---|---|---|---|---|---|
-| **1** | **C++ SIMD Vectorization & Spatial Mapping** ($10^6$ PostGIS points) | **3.2 ms** | 142.8 ms | **44.6x** | 🏆 **NIFDU** |
-| **2** | **Multi-Hop Async Graph Orchestration** (20-node DAG workflow) | **1.8 ms** | 68.4 ms | **38.0x** | 🏆 **NIFDU** |
-| **3** | **Sub-Millisecond Snapshot State Rewind** (10,000 AST state snapshots) | **0.5 ms** | 34.1 ms | **68.2x** | 🏆 **NIFDU** |
-| **4** | **Zero-Token Binary Prompt Compression** (100KB JSON to C++ binary) | **0.9 ms** | 41.5 ms | **46.1x** | 🏆 **NIFDU** |
-| **5** | **Real-Time WebRTC TURN Auth Engine** (1,000 video channels) | **1.1 ms** | 29.3 ms | **26.6x** | 🏆 **NIFDU** |
-| **6** | **Pakistan Multi-Gateway Settlement Engine** (Raast, JazzCash, Cards) | **2.4 ms** | 52.0 ms | **21.7x** | 🏆 **NIFDU** |
-| **7** | **PostgreSQL Connection Pooling** (1,000 parallel DB writes) | **4.1 ms** | 89.6 ms | **21.9x** | 🏆 **NIFDU** |
-| **8** | **Visual Chromium Judge & DOM Auditing** (Bounding box calculation) | **12.6 ms** | 210.4 ms | **16.7x** | 🏆 **NIFDU** |
-| **9** | **100-Thread Parallel Agent Footprint** (100 concurrent threads) | **8.0 ms** | 315.0 ms | **39.4x** | 🏆 **NIFDU** |
-| **10** | **End-to-End Product Generation Latency** (10-step code generation) | **38.5 ms** | 450.0 ms | **11.7x** | 🏆 **NIFDU** |
+Current Termux defaults use a maximum of two quality loops, allowing good products to finish quickly while still giving the repair stage one additional opportunity.
 
----
+## One-line installation
 
-## 📥 Downloads & Installation
-
-### Reliable 1-Line Install (Termux / Linux / macOS)
-
-The installer is served directly from GitHub, so it does not depend on the Xerus web server or its TLS configuration.
+### Termux, Linux and macOS
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/badrpk/nifdu/master/install-nifdu.sh | bash
 ```
 
-The script installs required build tools, downloads the latest source, builds NIFDU natively for the current architecture, and installs it to `~/.local/bin/nifdu`.
-
-### Review Before Running
+Then run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/badrpk/nifdu/master/install-nifdu.sh -o install-nifdu.sh
-less install-nifdu.sh
-bash install-nifdu.sh
+nifdu
 ```
 
-### Build from Source (CMake & C++20)
+Example request:
+
+```text
+Create a polished responsive scientific calculator with history, keyboard support and mobile controls.
+```
+
+## Build from source
 
 ```bash
 git clone https://github.com/badrpk/nifdu.git
 cd nifdu
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-./build/nifdu --help
+cmake -S . -B build -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_TESTING=OFF
+cmake --build build --target nifdu --parallel
+./build/nifdu
 ```
 
----
+## Output
 
-## 📄 License & Ecosystem
-Built under the **MIT License** as part of the **badrpk Software Ecosystem**.
+Each run creates a workspace such as:
 
-Contributions, issues, and pull requests are welcome!
+```text
+~/nifdu-workspaces/product-YYYYMMDD-HHMMSS/
+├── product/index.html
+└── final-report.json
+```
 
-Copyright © 2026 **NIFDU Product Engine** • Hosted on [www.xerus.biz](https://www.xerus.biz)
+The generated product can be served locally with:
+
+```bash
+cd ~/nifdu-workspaces/product-YYYYMMDD-HHMMSS/product
+python3 -m http.server 8080 --bind 127.0.0.1
+```
+
+Open `http://127.0.0.1:8080` in the browser.
+
+## Planned 10-test comparison
+
+The benchmark suite covers:
+
+1. scientific calculator;
+2. Snake game;
+3. synonym quiz;
+4. 900-word news editor;
+5. Kanban board;
+6. Markdown editor;
+7. chess game;
+8. drawing application;
+9. weather dashboard;
+10. expense tracker.
+
+Results will report total score, average score, first-attempt passes, average build time and invalid-output count.
+
+## Why try NIFDU
+
+- Native C++20 executable
+- Runs on Android through Termux
+- Plain-English product generation
+- Automatic AI judging and repair
+- Immediate local preview
+- Self-contained HTML output
+- Reproducible JSON reports
+- Open-source MIT licence
+
+## Contributing
+
+Bug reports, benchmark improvements, installation fixes and product-generation tests are welcome through GitHub issues and pull requests.
+
+## Licence
+
+MIT License. Copyright © 2026 NIFDU Product Engine.
