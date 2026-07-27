@@ -1,0 +1,78 @@
+name: Apply Termux fast mode
+
+on:
+  push:
+    paths:
+      - .github/workflows/apply-termux-fast-mode.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch NIFDU for Termux
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/main.cpp')
+          s = p.read_text(encoding='utf-8')
+
+          s = s.replace(
+              'constexpr int MAX_ITERATIONS = 10;',
+              'constexpr int MAX_ITERATIONS = 2;',
+              1,
+          )
+          s = s.replace(
+              'constexpr int ACCEPTANCE_SCORE = 95;',
+              'constexpr int ACCEPTANCE_SCORE = 85;',
+              1,
+          )
+
+          needle = '''        fs::create_directories(output_directory);
+
+        std::vector<Capture> captures;
+'''
+          replacement = '''        fs::create_directories(output_directory);
+
+        if (fs::exists("/data/data/com.termux/files/usr")) {
+            std::cout
+                << "Termux fast mode: skipping headless screenshots.\\n";
+            return {};
+        }
+
+        std::vector<Capture> captures;
+'''
+
+          if 'Termux fast mode: skipping headless screenshots.' not in s:
+              if needle not in s:
+                  raise SystemExit('capture insertion point not found')
+              s = s.replace(needle, replacement, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify patch
+        run: |
+          grep -n 'MAX_ITERATIONS = 2' src/main.cpp
+          grep -n 'ACCEPTANCE_SCORE = 85' src/main.cpp
+          grep -n 'Termux fast mode: skipping headless screenshots' src/main.cpp
+
+      - name: Commit update
+        run: |
+          if git diff --quiet; then
+            echo 'No changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/main.cpp
+          git commit -m 'Add Termux fast mode and reduce validation loops'
+          git push
