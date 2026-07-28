@@ -7,7 +7,6 @@
 #include "nifdu/lang_adapter.hpp"
 #include "nifdu/lang_graph.hpp"
 #include "nifdu/lang_smith.hpp"
-#include "nifdu/pakistan_payments.hpp"
 
 #include <nlohmann/json.hpp>
 #include <string>
@@ -49,7 +48,6 @@ public:
     void start();
     void stop();
 
-    // Telemetry and Realtime Store Accessors
     std::vector<MapSegment>& get_segments() { return in_memory_segments_; }
 
 private:
@@ -57,23 +55,20 @@ private:
     void serve_loop();
     void handle_client(int client_fd);
     HttpResponse dispatch_request(const HttpRequest& request);
-    
-    // WebSocket Handshake & Frame Helpers
+
     bool is_websocket_request(const HttpRequest& req);
     HttpResponse handle_websocket_handshake(const HttpRequest& req);
 
     int port_;
     std::atomic<bool> running_{false};
     std::thread server_thread_;
-    
+
     std::mutex routes_mutex_;
     std::map<std::string, HttpHandler> routes_;
 
-    // Core Native Subsystems
     Agent3Engine agent_engine_;
     UniversalLlmAdapter model_adapter_;
     GraphWorkflow graph_workflow_;
-    PakistanPaymentEngine payment_engine_;
 
     std::vector<MapSegment> in_memory_segments_;
     std::map<std::string, std::string> device_keys_;
