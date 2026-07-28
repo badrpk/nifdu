@@ -1,0 +1,47 @@
+name: C++ CI
+
+on:
+  push:
+    branches:
+      - master
+      - feature/**
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libcurl4-openssl-dev nlohmann-json3-dev
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=OFF
+
+      - name: Build
+        run: cmake --build build --target nifdu --parallel
+
+      - name: Verify graph-control launcher
+        run: |
+          test -x build/nifdu
+          test -x build/nifdu-core
+          build/nifdu --graph-status
+
+      - name: Verify policy denial
+        run: |
+          set +e
+          HOME="$RUNNER_TEMP/nifdu-home" build/nifdu "rm -rf /"
+          status=$?
+          set -e
+          test "$status" -eq 3
+          test -n "$(find "$RUNNER_TEMP/nifdu-home/.local/share/nifdu/control-plane/traces" -name '*-trace.json' -print -quit)"

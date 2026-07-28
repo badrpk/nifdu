@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(
     nifdu
-    VERSION 2.0.0
-    DESCRIPTION "Autonomous C++ visual product supervisor & NIFDU Core Engine"
+    VERSION 2.1.0
+    DESCRIPTION "Autonomous C++ visual product supervisor with graph control plane"
     LANGUAGES CXX
 )
 
@@ -15,20 +15,31 @@ find_package(CURL REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(Threads REQUIRED)
 
-add_executable(nifdu src/main.cpp)
+add_executable(nifdu-core src/main.cpp)
+add_executable(nifdu src/control_plane_main.cpp)
+add_dependencies(nifdu nifdu-core)
 
-target_compile_options(
-    nifdu
+foreach(target nifdu nifdu-core)
+    target_compile_options(
+        ${target}
+        PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+    )
+endforeach()
+
+target_link_libraries(
+    nifdu-core
     PRIVATE
-    -Wall
-    -Wextra
-    -Wpedantic
+    CURL::libcurl
+    nlohmann_json::nlohmann_json
+    Threads::Threads
 )
 
 target_link_libraries(
     nifdu
     PRIVATE
-    CURL::libcurl
     nlohmann_json::nlohmann_json
     Threads::Threads
 )
