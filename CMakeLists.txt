@@ -22,7 +22,6 @@ set(
     src/lang_adapter.cpp
     src/lang_graph.cpp
     src/lang_smith.cpp
-    src/pakistan_payments.cpp
     src/realtime.cpp
     src/telemetry.cpp
 )
@@ -80,30 +79,3 @@ target_link_libraries(
 )
 
 include(CTest)
-
-if(
-    BUILD_TESTING
-    AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_pakistan_payments.cpp"
-)
-    add_executable(
-        test_pakistan_payments
-        tests/test_pakistan_payments.cpp
-    )
-
-    target_link_libraries(
-        test_pakistan_payments
-        PRIVATE
-            nifdu_core
-    )
-
-    add_test(
-        NAME pakistan_payments
-        COMMAND test_pakistan_payments
-    )
-
-    set_tests_properties(
-        pakistan_payments
-        PROPERTIES
-            TIMEOUT 30
-    )
-endif()
