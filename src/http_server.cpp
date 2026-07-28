@@ -31,7 +31,6 @@ void NativeHttpServer::register_route(const std::string& method, const std::stri
 }
 
 void NativeHttpServer::setup_routes() {
-    // 1. Health Check Route
     register_route("GET", "/api/health", [](const HttpRequest&) {
         HttpResponse res;
         json body;
@@ -42,7 +41,6 @@ void NativeHttpServer::setup_routes() {
         return res;
     });
 
-    // 2. Agent-3 Routes
     register_route("POST", "/api/agent/plan", [this](const HttpRequest& req) {
         HttpResponse res;
         std::string sess = req.json_body.value("session_id", "sess_cpp_001");
@@ -65,7 +63,6 @@ void NativeHttpServer::setup_routes() {
         out["plan"]["session_id"] = sess;
         out["plan"]["prompt"] = prompt;
         out["plan"]["steps"] = steps;
-
         res.body = out.dump();
         return res;
     });
@@ -74,7 +71,6 @@ void NativeHttpServer::setup_routes() {
         HttpResponse res;
         std::string sess = req.json_body.value("session_id", "");
         int step_id = req.json_body.value("step_id", 1);
-
         res.body = agent_engine_.execute_step(sess, step_id).dump();
         return res;
     });
@@ -83,12 +79,10 @@ void NativeHttpServer::setup_routes() {
         HttpResponse res;
         std::string path = req.json_body.value("filepath", "main.cpp");
         std::string new_content = req.json_body.value("new_content", "// C++ edit");
-
         auto prev = agent_engine_.preview_diff(path, new_content);
         json out;
         out["filepath"] = prev.target_file;
         out["diff"] = prev.diff_patch;
-
         res.body = out.dump();
         return res;
     });
@@ -104,12 +98,10 @@ void NativeHttpServer::setup_routes() {
         json out;
         out["success"] = true;
         out["snapshot_id"] = agent_engine_.create_snapshot(files);
-
         res.body = out.dump();
         return res;
     });
 
-    // 3. Telemetry & Maps Routes
     register_route("POST", "/api/telemetry", [](const HttpRequest& req) {
         HttpResponse res;
         std::string dev_id = req.json_body.value("deviceId", "device_01");
@@ -117,7 +109,6 @@ void NativeHttpServer::setup_routes() {
         out["success"] = true;
         out["device_id"] = dev_id;
         out["status"] = "Telemetry Processed via NIFDU SIMD Engine";
-
         res.body = out.dump();
         return res;
     });
@@ -131,18 +122,15 @@ void NativeHttpServer::setup_routes() {
         return res;
     });
 
-    // 4. Realtime Auth & TURN Routes
     register_route("POST", "/api/auth/key", [this](const HttpRequest& req) {
         HttpResponse res;
         std::string dev_id = req.json_body.value("deviceId", "dev_001");
         std::string key = nifdu::RealtimeHub::generate_device_secret(dev_id);
         device_keys_[dev_id] = key;
-
         json out;
         out["success"] = true;
         out["deviceId"] = dev_id;
         out["hmac_key"] = key;
-
         res.body = out.dump();
         return res;
     });
@@ -153,7 +141,6 @@ void NativeHttpServer::setup_routes() {
         return res;
     });
 
-    // 5. LangChain / Graph / Smith Routes
     register_route("POST", "/api/llm/invoke", [this](const HttpRequest& req) {
         HttpResponse res;
         std::string prompt = req.json_body.value("prompt", "Hello NIFDU");
@@ -162,118 +149,6 @@ void NativeHttpServer::setup_routes() {
         out["provider"] = "ollama";
         out["model"] = "qwen2.5-coder:7b";
         out["response"] = out_str;
-
-        res.body = out.dump();
-        return res;
-    });
-
-    // 6. PAKISTAN MULTI-GATEWAY PAYMENT API ROUTES (JazzCash, Easypaisa, UPaisa, SBP Raast, Credit Cards)
-    register_route("POST", "/api/payments/jazzcash/pay", [this](const HttpRequest& req) {
-        HttpResponse res;
-        std::string msisdn = req.json_body.value("msisdn", "923212558089");
-        double amount = req.json_body.value("amount_pkr", 25200.0);
-        std::string ref = req.json_body.value("ref_id", "REF_JC_90USD");
-
-        auto p_res = payment_engine_.initiate_jazzcash_payment(msisdn, amount, ref);
-        json out;
-        out["success"] = p_res.success;
-        out["gateway"] = p_res.gateway;
-        out["transaction_id"] = p_res.transaction_id;
-        out["msisdn"] = p_res.msisdn;
-        out["amount_pkr"] = p_res.amount_pkr;
-        out["amount_usd"] = p_res.amount_usd;
-        out["status_code"] = p_res.status_code;
-        out["message"] = p_res.response_message;
-        try { out["raw"] = json::parse(p_res.raw_response); } catch (...) { out["raw"] = p_res.raw_response; }
-
-        res.body = out.dump();
-        return res;
-    });
-
-    register_route("POST", "/api/payments/easypaisa/pay", [this](const HttpRequest& req) {
-        HttpResponse res;
-        std::string msisdn = req.json_body.value("msisdn", "923212558089");
-        double amount = req.json_body.value("amount_pkr", 25200.0);
-        std::string ref = req.json_body.value("ref_id", "REF_EP_90USD");
-
-        auto p_res = payment_engine_.initiate_easypaisa_payment(msisdn, amount, ref);
-        json out;
-        out["success"] = p_res.success;
-        out["gateway"] = p_res.gateway;
-        out["transaction_id"] = p_res.transaction_id;
-        out["msisdn"] = p_res.msisdn;
-        out["amount_pkr"] = p_res.amount_pkr;
-        out["amount_usd"] = p_res.amount_usd;
-        out["status_code"] = p_res.status_code;
-        out["message"] = p_res.response_message;
-        try { out["raw"] = json::parse(p_res.raw_response); } catch (...) { out["raw"] = p_res.raw_response; }
-
-        res.body = out.dump();
-        return res;
-    });
-
-    register_route("POST", "/api/payments/upaisa/pay", [this](const HttpRequest& req) {
-        HttpResponse res;
-        std::string msisdn = req.json_body.value("msisdn", "923212558089");
-        double amount = req.json_body.value("amount_pkr", 25200.0);
-        std::string ref = req.json_body.value("ref_id", "REF_UP_90USD");
-
-        auto p_res = payment_engine_.initiate_upaisa_payment(msisdn, amount, ref);
-        json out;
-        out["success"] = p_res.success;
-        out["gateway"] = p_res.gateway;
-        out["transaction_id"] = p_res.transaction_id;
-        out["msisdn"] = p_res.msisdn;
-        out["amount_pkr"] = p_res.amount_pkr;
-        out["amount_usd"] = p_res.amount_usd;
-        out["status_code"] = p_res.status_code;
-        out["message"] = p_res.response_message;
-        try { out["raw"] = json::parse(p_res.raw_response); } catch (...) { out["raw"] = p_res.raw_response; }
-
-        res.body = out.dump();
-        return res;
-    });
-
-    register_route("POST", "/api/payments/raast/pay", [this](const HttpRequest& req) {
-        HttpResponse res;
-        std::string alias = req.json_body.value("msisdn_alias", "923212558089");
-        double amount = req.json_body.value("amount_pkr", 25200.0);
-        std::string iban = req.json_body.value("iban", "PK36MEZN00010101010101");
-
-        auto p_res = payment_engine_.initiate_raast_payment(alias, amount, iban);
-        json out;
-        out["success"] = p_res.success;
-        out["gateway"] = p_res.gateway;
-        out["transaction_id"] = p_res.transaction_id;
-        out["raast_alias"] = p_res.msisdn;
-        out["amount_pkr"] = p_res.amount_pkr;
-        out["amount_usd"] = p_res.amount_usd;
-        out["status_code"] = p_res.status_code;
-        out["message"] = p_res.response_message;
-        try { out["raw"] = json::parse(p_res.raw_response); } catch (...) { out["raw"] = p_res.raw_response; }
-
-        res.body = out.dump();
-        return res;
-    });
-
-    register_route("POST", "/api/payments/card/charge", [this](const HttpRequest& req) {
-        HttpResponse res;
-        std::string card_num = req.json_body.value("card_number", "4242424242424242");
-        std::string exp = req.json_body.value("exp_date", "12/28");
-        std::string cvv = req.json_body.value("cvv", "123");
-        double amount_usd = req.json_body.value("amount_usd", 90.0);
-
-        auto p_res = payment_engine_.process_card_payment(card_num, exp, cvv, amount_usd);
-        json out;
-        out["success"] = p_res.success;
-        out["gateway"] = p_res.gateway;
-        out["transaction_id"] = p_res.transaction_id;
-        out["amount_usd"] = p_res.amount_usd;
-        out["amount_pkr"] = p_res.amount_pkr;
-        out["status_code"] = p_res.status_code;
-        out["message"] = p_res.response_message;
-        try { out["raw"] = json::parse(p_res.raw_response); } catch (...) { out["raw"] = p_res.raw_response; }
-
         res.body = out.dump();
         return res;
     });
@@ -346,7 +221,6 @@ void NativeHttpServer::handle_client(int client_fd) {
         line_stream >> req.method >> req.path;
     }
 
-    // Parse Headers
     while (std::getline(stream, line) && line != "\r" && line != "") {
         auto colon = line.find(':');
         if (colon != std::string::npos) {
@@ -359,7 +233,6 @@ void NativeHttpServer::handle_client(int client_fd) {
         }
     }
 
-    // Parse Body
     auto body_pos = raw_req.find("\r\n\r\n");
     if (body_pos != std::string::npos) {
         req.body = raw_req.substr(body_pos + 4);
