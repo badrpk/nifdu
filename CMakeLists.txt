@@ -17,6 +17,7 @@ find_package(Threads REQUIRED)
 
 add_executable(nifdu-core src/main.cpp)
 add_executable(nifdu src/control_plane_main.cpp)
+add_dependencies(nifdu nifdu-core)
 
 foreach(target nifdu nifdu-core)
     target_compile_options(
