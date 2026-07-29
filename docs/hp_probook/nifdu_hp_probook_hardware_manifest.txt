@@ -1,0 +1,57 @@
+NIFDU OS — HP PROBOOK HARDWARE MANIFEST
+=======================================
+
+This file describes the main hardware domains that NIFDU OS must support
+on the HP ProBook as a local AI workstation.
+
+1) CPU
+   - Vendor: HP ProBook platform CPU (Intel or AMD, model-specific).
+   - Role: general-purpose compute, AI orchestration, kernels.
+   - NIFDU plan: expose CPU topology to the scheduler; support per-core
+     power states and frequency scaling.
+
+2) GPU
+   - Integrated or discrete GPU depending on ProBook model.
+   - Role: large model inference acceleration, graphics for GUI.
+   - NIFDU plan: in UEFI seed, use GOP for simple framebuffer;
+     long term: implement GPU driver and command submission queues.
+
+3) System memory (RAM)
+   - Role: host model weights, buffers, and OS structures.
+   - NIFDU plan: physical memory manager plus zero-copy paths to AI stacks.
+
+4) Storage
+   - Internal SSD/HDD.
+   - Role: store NIFDU OS kernel, apps, models, user data.
+   - NIFDU plan: block driver stack, filesystem layer, journaling and
+     crash-safe metadata.
+
+5) Keyboard
+   - Built-in laptop keyboard.
+   - NIFDU plan: initial support via firmware input; later native PS/2/USB
+     or HID driver feeding events into the NIFDU shell.
+
+6) Touchpad / Mouse
+   - Internal touchpad or external USB mouse.
+   - NIFDU plan: pointer device driver that maps to on-screen cursor and
+     basic window/button interactions.
+
+7) Laptop screen
+   - Internal LCD panel driven via GPU.
+   - NIFDU plan: early stage uses GOP framebuffer;
+     later: mode setting and acceleration via native GPU driver.
+
+8) USB controller
+   - USB ports for keyboard/mouse/USB sticks.
+   - NIFDU plan: USB host controller driver; mass storage and HID support;
+     ability to boot from USB and mount external NIFDU OS drives.
+
+9) Audio (future)
+   - Speakers/mic for voice-first AI shell.
+   - NIFDU plan: audio driver plus capture pipeline into NIFDU voice agent.
+
+Status:
+   - Current kernel seed: text and simple framebuffer GUI only.
+   - Inputs: UEFI console key events only.
+   - This manifest is for planning and tracking full driver coverage.
+

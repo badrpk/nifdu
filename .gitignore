@@ -1,0 +1,66 @@
+# never publish
+_diag/
+_design/
+_investor_video/
+build/
+cmake-build*/
+**/CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+*.wasm
+*.bak
+*.bak_*
+*.backup
+*.old
+*.orig
+*.off
+CMakeLists.txt.bak*
+
+# embeds / vendor dumps
+build-your-own-x/
+third_party/
+src/apps/
+ai/.venv/
+**/.venv/
+**/site-packages/
+node_modules/
+*.zip
+boost*/
+tools/ffmpeg/
+toolchain/downloads/
+
+# sites / runtime / workspace junk
+www/
+workspaces/
+nifdu-workspaces/
+0.0.0.0/
+acme/
+acme-challenge/
+state/
+temp/
+studio-deploy/
+static/
+src_safe/
+
+# secrets / local config
+**/*secrets*
+**/*.pem
+**/*.key
+**/privkey*
+**/fullchain*
+nifdu.toml
+*.toml.bak*
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+__pycache__/
+*.pyc
+*.log
+*.obj

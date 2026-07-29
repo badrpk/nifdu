@@ -1,0 +1,18 @@
+NIFDU AGENT 3 — ROOT LAW (ABSOLUTE)
+
+1. Project root is:
+   C:\nifdu\src\apps\<project>
+
+2. index.html MUST exist at project root.
+
+3. vite root MUST be '.'
+
+4. Agent 3 is FORBIDDEN from writing to:
+   - C:\webroot
+   - C:\inetpub
+   - any hosting directory
+
+5. Deployment is:
+   src/apps/<project>/dist → webroot/apps/<project>
+
+Violation = HARD ERROR.

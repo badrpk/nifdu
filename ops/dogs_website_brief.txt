@@ -1,0 +1,13 @@
+You are NIFDU Agent 3.
+
+Build a full-stack product called **Dogs Website**:
+- Public marketing site for a dog breeding / adoption business.
+- Modern responsive web frontend (React/Vite or similar).
+- Pages: Home, Available Dogs, About, Contact.
+- Simple lead form: name, phone, city, dog preference.
+- Generate a clean static build that NIFDU can serve from:
+  C:\webroot\nifdu.com\www\apps\dogs_website
+
+Also scaffold:
+- mobile/ (Android/iOS) skeleton folders under src\apps\dogs_website\mobile
+- a minimal backend API stub for /api/dogs/leads (even if it's just a JSON POST stub for now).

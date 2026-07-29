@@ -1,0 +1,1660 @@
+0. Preface — What This Document Is
+
+This document is the canonical, human-readable specification of NIFDU:
+
+What NIFDU is (and is not)
+
+How it is conceptually structured
+
+How the subsystems fit together
+
+How engineers should think when extending it
+
+How operations should run it in production
+
+How AI, hosting, and app generation all interlock
+
+It is written to be:
+
+Implementation-agnostic in syntax (no code), but
+
+Implementation-aligned in semantics (directly maps to your C++ / directory layout / Windows service reality).
+
+Whenever there is a conflict between an ad-hoc idea and this document, NIFDU engineers should trust this document as the source of truth, update it if reality changes, and treat it as the “constitution” of the system.
+
+1. NIFDU in One Sentence
+
+NIFDU is a local, AI-native, C++ web server that takes human descriptions and turns them into fully deployed web / app experiences, hosted from a single binary, backed by PostgreSQL and local LLMs.
+
+Everything else is detail.
+
+NIFDU sits at the intersection of:
+
+Hosting (like Caddy / Nginx / Vercel)
+
+Generation (like ChatGPT / Claude / Codeium)
+
+Deployment automation (like Render / Netlify / Heroku)
+
+No-code builders (like Bubble / Webflow / Wix)
+
+Tool orchestration (like an internal MCP tool server)
+
+But instead of a sprawling cloud of microservices, you run one binary, on one machine, with one configuration universe, and NIFDU does the rest.
+
+2. Core Philosophical Pillars
+
+These are not just “nice ideas”. They are hard constraints that should guide all future engineering decisions.
+
+2.1 Everything Critical Lives in C++
+
+All core responsibilities are inside the NIFDU C++ binary:
+
+HTTP / HTTPS listener and routing
+
+TLS, SNI, ACME challenge handling
+
+Static file serving and compression
+
+Request parsing, templating, HTML rendering
+
+AI orchestration and local model invocation
+
+Project lifecycle management (create → build → deploy → serve)
+
+Multi-tenant routing and isolation rules
+
+Metrics, logging, and crash handling
+
+There are no mandatory auxiliary servers like:
+
+Node.js instances
+
+Python web frameworks
+
+Java application servers
+
+PHP interpreters
+
+Reverse proxies
+
+External scripts (PowerShell, Python, etc.) may exist as support tools (bootstrap, diagnostics, migrations), but NIFDU’s runtime behavior must not depend on them during normal operation.
+
+Design implication for engineers:
+
+When a new feature is proposed (“we should support feature X”), first ask:
+
+Can this be done inside the existing C++ core?
+
+If not, can we add a C++ module rather than another external service?
+
+Avoid solving problems with “let’s just spin up a separate service” as the default answer.
+
+NIFDU is a monolith by design, not by laziness. This is a conscious choice to maximize performance, predictability, and simplicity.
+
+2.2 UI as HTML-Only — No Framework Religion
+
+NIFDU’s UI philosophy is intentionally conservative:
+
+No React, Angular, Vue, Svelte, etc.
+
+No Node-based build pipelines (webpack, Vite, Turbopack, etc.) for NIFDU’s own UI.
+
+The Studio and all system-generated frontends are built with:
+
+Plain HTML
+
+Standard form submissions
+
+Simple CSS
+
+Minimal progressive enhancement at most, if ever added.
+
+The idea is:
+
+Every interface that NIFDU itself serves should be:
+
+Indexable by any user agent that understands HTML
+
+Stable across decades
+
+Almost impossible to break due to JavaScript, bundlers, or dependency updates.
+
+Why this matters operationally:
+
+Fewer moving parts means easier debugging.
+
+HTML-only frontends behave consistently across devices and browsers.
+
+Page render time is bounded by:
+
+Server time to produce HTML
+
+Network latency
+
+Browser DOM paint
+
+There is no third “JS hydration phase”.
+
+For engineers:
+
+When designing NIFDU Studio screens, status pages, dashboards, or generated apps:
+
+Think in terms of:
+
+<form> for actions
+
+<table>, <ul>, <section> for layout
+
+<iframe> for embedding previews
+
+CSS for appearance and basic responsiveness
+
+Avoid the temptation to add JS for “just one small interaction”, because:
+
+JS tends to spread, and
+
+It becomes an implicit requirement (which breaks server-centric philosophy).
+
+If a truly interactive feature cannot be expressed as a sequence of HTML pages plus form posts, it should be heavily scrutinized before inclusion.
+
+2.3 One Binary, Many Hosts
+
+Conceptually, NIFDU runs as something like:
+
+Windows service: nifdu-http-80 / nifdu-http-443
+
+Executable path: e.g., C:\nifdu\out\nifdu.exe
+
+From the outside, it looks like any other HTTP(S) server, but internally:
+
+It accepts all incoming connections on port 80/443.
+
+Uses SNI and Host headers to determine:
+
+Which tenant / domain is being requested.
+
+Which root directory maps to that host.
+
+Serves static content from per-domain roots, such as:
+
+C:\webroot\nifdu.com\www
+
+C:\webroot\mycustomer.com\www
+
+Or, directly from C:\nifdu\www / static / projects if configured.
+
+Handles dynamic routes (Studio endpoints, project APIs) via routing tables that live entirely inside NIFDU’s configuration and runtime data structures.
+
+For the engineering team:
+
+There should be no assumption of “one process per domain”.
+
+NIFDU’s responsibility is to be a fully multi-tenant web fabric, where:
+
+Domain A and domain B may share the same CPU and memory space, but
+
+Their filesystem paths, database rows, and logs are isolated.
+
+Future enhancements (like process pools or worker isolation) may emerge, but the fundamental single entry point design remains.
+
+2.4 Local AI First, Cloud AI Only as Optional
+
+NIFDU’s AI system (NifduDroid) is built with the following hierarchy:
+
+Local model (llama.cpp, Qwen, etc.) is the primary engine.
+
+Remote APIs (OpenAI, Anthropic, etc.) are optional, never required.
+
+The default behavior must be:
+
+Fully functional with zero external AI connectivity.
+
+Deterministic in cost and performance.
+
+Local models currently include:
+
+A code/assistant model (e.g., Qwen2.5 1.5B) for:
+
+Interpreting user wishes
+
+Producing HTML skeletons
+
+Proposing data models and flows
+
+A vector embedding model (e.g., bge-small-en-v1.5) for:
+
+RAG over project content
+
+Knowledge reuse across multiple projects
+
+In the future, additional models may be embedded for:
+
+Voice (Whisper-style)
+
+Image search and understanding (CLIP-style)
+
+More capable coding assistance (7B+ models)
+
+Engineering implication:
+
+Every AI call site should be pluggable:
+
+Local model path / config
+
+Optional cloud fallback
+
+Observability is crucial:
+
+Logs should clearly show when local inference was used or when the system tried cloud.
+
+Error paths must be robust:
+
+AI failures should degrade gracefully:
+
+Provide partial results
+
+Ask the user for clarifications
+
+Never crash the entire server.
+
+2.5 Offline-First Mentality
+
+NIFDU is designed under the assumption that:
+
+The machine might lose internet.
+
+ACME renewals can temporarily fail.
+
+Domain APIs might glitch.
+
+Payment gateways might not respond.
+
+Despite this, core functionality must remain intact:
+
+Locally registered domains should keep serving.
+
+Studio should remain accessible via the local network / IP.
+
+Projects should still be creatable and previewable locally.
+
+AI should continue functioning entirely offline.
+
+From the ops perspective:
+
+External dependencies:
+
+Domains
+
+TLS issuance
+
+Payment providers
+
+are treated as synchronization points, not runtime hard requirements.
+
+NIFDU should eventually reconcile with the outside world when connectivity returns, but it must not become unusable simply because the network is unstable.
+
+2.6 Zero-Step UX for Non-Technical Users
+
+The product guarantee to the end user is:
+
+You never need to:
+
+Install dev tools
+
+Manage servers
+
+Touch DNS manually
+
+Learn Git
+
+Handle deployments
+
+Your interaction surface is essentially:
+
+A Studio page at /studio/
+
+Forms that capture:
+
+What you want built
+
+How it should look
+
+Which domain you want
+
+Buttons for:
+
+“Generate”
+
+“Preview”
+
+“Deploy”
+
+Everything else is internal.
+
+For engineers, this means:
+
+You do the hard work once inside NIFDU.
+
+Users benefit from that work thousands of times without needing to understand the internals.
+
+UX should always assume:
+
+Users are intelligent, but not technical.
+
+They can describe what they want in natural language.
+
+They can click and read, but not debug stack traces.
+
+2.7 NIFDU as a Software Power Plant
+
+The central metaphor:
+
+Electricity → devices work.
+
+NIFDU → software works.
+
+Users shouldn’t be aware of:
+
+The boiler
+
+The turbines
+
+The generator
+
+The transmission network
+
+They only care about the socket and the switch.
+
+For NIFDU:
+
+Turbines = C++ server core
+
+Boiler = Hardware + OS
+
+Generator = AI system + configuration
+
+Transmission = HTTP/TLS + routing + DNS
+
+Socket = Studio UI
+
+Switch = “Deploy” button
+
+This mindset should inform architecture:
+
+Strive for minimalism at the edges.
+
+Accept complexity only inside the plant, and hide it behind clear abstractions.
+
+3. Physical Layout of NIFDU on Disk
+
+Using your current directory tree as an anchor, we can define a canonical mental map:
+
+C:\nifdu\src
+
+Core C++ sources for NIFDU.
+
+C:\nifdu\config
+
+Configuration files (nifdu.toml, etc.).
+
+C:\nifdu\logs
+
+Logs for HTTP, AI, ACME, and internal events.
+
+C:\nifdu\www / C:\nifdu\static
+
+Built-in static assets and core HTML used by Studio and system pages.
+
+C:\nifdu\studio
+
+Templates and assets specific to Studio UI.
+
+C:\nifdu\projects
+
+Project metadata, previews, artifacts (not necessarily the final webroots).
+
+C:\nifdu\sites / C:\webroot\...
+
+Deployed sites mapped to domains (final hosting directories).
+
+C:\nifdu\ai
+
+AI models, embeddings, indexes, and AI configuration.
+
+C:\nifdu\out or C:\nifdu\bin
+
+Built binary output (nifdu.exe).
+
+This layout is important for ops and engineering:
+
+You always know:
+
+Where configs live.
+
+Where logs live.
+
+Where models live.
+
+Where deployed sites live.
+
+Where to look when things break.
+
+The directory structure expresses the conceptual structure of the platform.
+
+4. The Seven Major Subsystems
+
+We’ll now walk through the seven core components:
+
+NifduServe — HTTP/TLS/Static engine
+
+NifduStack — Application / logic layer
+
+NifduRender — Template & HTML generator
+
+NifduPack — Packager / app builder
+
+NifduDroid — AI brain
+
+NifduTools — External connectors
+
+NifduOps — Operations / DevOps layer
+
+4.1 NifduServe — The Network Engine
+
+Role: Take bytes from the network, understand them as HTTP, and send back appropriate bytes as responses.
+
+Responsibilities
+
+Bind and listen on:
+
+TCP port 80 (HTTP)
+
+TCP port 443 (HTTPS)
+
+Accept connections, handle:
+
+TCP handshake
+
+TLS handshake (where applicable)
+
+SNI parsing
+
+Parse HTTP:
+
+Methods, headers, body, URL, query string
+
+Keep-alive semantics
+
+Route requests:
+
+To static file handler
+
+To dynamic endpoint handlers
+
+Enforce basic security:
+
+Reject invalid Host headers
+
+Restrict methods where necessary
+
+Enforce canonical redirects (e.g., www. → apex) if configured
+
+Serve static files:
+
+Map path → file
+
+Protect against path traversal
+
+Apply correct MIME types and caching headers
+
+Support precompressed .br/.gz assets when present
+
+Handle ACME:
+
+Serve special paths for certificate validation
+
+Log everything critical:
+
+Access logs
+
+Error logs
+
+ACME events
+
+TLS issues
+
+Request Lifecycle (Conceptual)
+
+For each incoming connection:
+
+Connection accepted on the relevant port.
+
+If HTTPS:
+
+Perform TLS handshake.
+
+Extract SNI host.
+
+Determine host:
+
+From SNI or Host header.
+
+Look up host configuration:
+
+Check in-memory routing table.
+
+Decide handler:
+
+ACME?
+
+Studio?
+
+Project preview?
+
+Static site root?
+
+Invoke handler:
+
+Handler returns a response structure:
+
+Status code
+
+Headers
+
+Body (File or generated)
+
+Apply compression / range logic if applicable.
+
+Write HTTP response back to the client.
+
+Decide whether to close or keep-alive.
+
+All of this must be:
+
+Non-blocking where possible
+
+Multi-threaded
+
+Designed to scale linearly with available CPU cores.
+
+4.2 NifduStack — The Logic Brain
+
+Role: Host the “business logic” of NIFDU:
+
+Studio workflows
+
+Project and user lifecycle
+
+Domain and deployment state machines
+
+Interactions with PostgreSQL and the vector store
+
+AI request orchestration
+
+Think of it as:
+
+The kernel that defines what happens when certain routes are hit, and how internal data is manipulated.
+
+Major Responsibilities
+
+Configuration management
+
+Load nifdu.toml at startup.
+
+Validate essential settings (ports, DB DSN, paths).
+
+Provide global access to config via safe interfaces.
+
+Database layer abstraction
+
+Abstract Postgres connections:
+
+Connection pool
+
+Query wrappers
+
+Error handling
+
+Guarantee invariants like:
+
+Every project belongs to a tenant.
+
+Every deployment is linked to a valid domain.
+
+Routing table registration
+
+Register dynamic endpoints such as:
+
+/studio/
+
+/studio/new
+
+/studio/preview
+
+/studio/deploy
+
+/healthz
+
+Admin / internal endpoints.
+
+Studio workflows
+
+Interpret user requests from forms:
+
+New project creation.
+
+Update project blueprint.
+
+Trigger AI generations.
+
+Manage project state transitions:
+
+Draft → Previewing → Ready → Deployed.
+
+Domain and deployment management
+
+Maintain associations between:
+
+Projects
+
+Domains
+
+Webroots
+
+Provide operations:
+
+Reserve a subdomain.
+
+Attach a custom domain.
+
+Trigger ACME for new hostnames.
+
+Mark deployments as live, pending, failed.
+
+AI orchestration
+
+Construct prompts for NifduDroid.
+
+Gather context from pgvector.
+
+Dispatch AI queries.
+
+Handle streaming responses.
+
+Interpret AI output into:
+
+Templates
+
+HTML
+
+Project configuration changes.
+
+Security and access control
+
+Manage sessions (cookies, tokens).
+
+Enforce per-tenant isolation at:
+
+Database level.
+
+Filesystem level where applicable.
+
+Protect system routes (admin panels) from unauthorized users.
+
+Error handling and user feedback
+
+Turn failures (DB, AI, file I/O) into:
+
+Clear log entries for ops.
+
+Clean, non-leaky error pages for users.
+
+4.3 NifduRender — Templating and HTML Generation
+
+Role: Turn structured data into HTML and other user-facing assets according to templates and conventions.
+
+NifduRender is where:
+
+AI outputs and static templates meet.
+
+The final user-visible pages (Studio, generated sites) are assembled.
+
+Key Concepts
+
+Templates
+
+Stored in files under something like:
+
+C:\nifdu\studio
+
+C:\nifdu\static\templates
+
+Contain placeholder syntax for:
+
+Dynamic content insertion
+
+Control structures (loops, conditionals)
+
+Are pure HTML/CSS with symbolic markers (no JS necessary).
+
+Data Models
+
+For each page, there is a structured data representation, such as:
+
+Project details
+
+User info
+
+Deployment status
+
+Logs / errors
+
+NifduRender takes the data and merges it into a template.
+
+Rendering Modes
+
+Immediate:
+
+Requests that build the HTML on demand.
+
+Pre-rendered:
+
+Generated HTML written to disk (e.g., index.html in a site root) and then served as static content.
+
+Reusable Components
+
+Shared sections:
+
+Headers
+
+Footers
+
+Navigation
+
+Status banners
+
+Should be composed like “include this partial here” concepts.
+
+Engineering Mindset
+
+NifduRender should remain fairly generic:
+
+It’s the engine that all UIs ride on.
+
+It must be stable, predictable, and easy to test.
+
+New templates should:
+
+Be versioned.
+
+Have clear naming.
+
+Avoid mixing debugging scaffolding with production markup.
+
+4.4 NifduPack — Packaging & Build Abstraction
+
+Current vs Future Scope
+
+Current focus:
+
+Primarily web applications.
+
+Deployment is largely a matter of copying HTML/CSS and static assets into a domain’s webroot.
+
+Future scope:
+
+Project types and packaging flows:
+
+Windows desktop apps.
+
+Android apps.
+
+iOS apps (via remote Mac build agent).
+
+Possibly cross-platform C++ GUI apps.
+
+Conceptual Responsibilities
+
+Given a project:
+
+Determine its target format (web, desktop, mobile).
+
+Generate a minimal project skeleton:
+
+For web: just the site tree.
+
+For desktop: C++ project layout, icons, metadata.
+
+For mobile: Android/iOS project directories, config, manifest.
+
+Invoke appropriate build toolchains:
+
+For example:
+
+MSVC / CMake for Windows apps.
+
+Gradle / SDK tools for Android.
+
+Xcodebuild for iOS (remotely).
+
+Track build status and artifacts.
+
+Report progress to Studio.
+
+In the near term, NifduPack can be thought of as a design placeholder: architecture is defined even if only web packaging is fully implemented.
+
+4.5 NifduDroid — AI Brain and RAG Engine
+
+Role: Turn natural language into structured design and content decisions, then into actual artifacts Nifdu can render or deploy.
+
+Major Capabilities
+
+Understanding User Intent
+
+Interpret prompts such as:
+
+“I want a website for my solar company that shows products, a contact form, and a page explaining financing.”
+
+Extract:
+
+Entities (company name, industry).
+
+Desired features (product catalog, contact form).
+
+Visual preferences (if provided).
+
+Functional constraints.
+
+Plan Construction
+
+Propose:
+
+Page structure (home, about, products, contact).
+
+Navigation.
+
+Content regions (hero, grid of cards, FAQ).
+
+Data model behind forms (e.g., contact form fields).
+
+Template & HTML Suggestion
+
+Use internal patterns and templates to suggest:
+
+Layout types.
+
+Form structures.
+
+Section designs.
+
+Generate human-readable blueprint plus machine-usable representation.
+
+Vector Search and RAG
+
+Pull in relevant examples from:
+
+Previous projects.
+
+Built-in design guidelines.
+
+Common design patterns stored in pgvector.
+
+Provide more consistent and higher quality suggestions over time.
+
+Multi-Pass Refinement
+
+First pass: broad blueprint.
+
+Second pass: refine content, adjust copy, align with user feedback.
+
+Optional third pass: element-level polishing (text tone, headings, CTAs).
+
+Error Recovery
+
+When a generation fails or is inconsistent:
+
+Provide internal logs for debugging.
+
+Allow NIFDU to retry with:
+
+Simplified prompts.
+
+Different temperature or parameters.
+
+Avoid dead-ends where the user is stuck.
+
+For Engineers
+
+NifduDroid is not just a “completion API”; it is a system:
+
+Prompt templates
+
+RAG pipelines
+
+Parameter sets
+
+Tools (functions it can call)
+
+All interactions with it should be:
+
+Logged in detail.
+
+Monitored for latency and quality.
+
+Configuration should allow:
+
+Swapping models.
+
+Tuning context window.
+
+Setting maximum runtime.
+
+4.6 NifduTools — Connectors to the Outside World
+
+NifduTools is the bridge between NIFDU’s internal universe and external services:
+
+Payments:
+
+Stripe, PayPal, or others to:
+
+Bill users for plans.
+
+Charge for domains.
+
+Manage subscriptions.
+
+Domains & DNS:
+
+Integrations with:
+
+GoDaddy
+
+Cloudflare
+
+Other registrars
+
+To:
+
+Purchase domains.
+
+Set DNS records.
+
+Validate propagation.
+
+Messaging & Notifications:
+
+Email (SMTP or transactional APIs).
+
+SMS (Twilio-like).
+
+Push notifications where applicable.
+
+Analytics & Telemetry:
+
+Basic usage metrics.
+
+Error reporting.
+
+Optional external telemetry.
+
+Design Requirements
+
+Tools must be:
+
+Pluggable:
+
+Enabled or disabled via configuration.
+
+Isolated:
+
+Failures must not take down the core server.
+
+Auditable:
+
+Clear logs around:
+
+API calls.
+
+Responses.
+
+Errors.
+
+NifduTools is not allowed to:
+
+Introduce hidden dependencies.
+
+Change system behavior silently when external APIs change.
+
+4.7 NifduOps — Operational Backbone
+
+Role: Make NIFDU viable in production:
+
+TLS and certificate management.
+
+Monitoring and alerts.
+
+Backups and recovery.
+
+Rate limiting and resource quotas.
+
+Multi-tenant isolation.
+
+Upgrade and rollout strategies.
+
+Responsibilities
+
+TLS / ACME
+
+Manage:
+
+ACME challenges.
+
+Certificate renewals.
+
+Ensure:
+
+Minimal downtime.
+
+Safe rotation of certs.
+
+Log Management
+
+Access logs
+
+Error logs
+
+ACME logs
+
+AI logs
+
+DB logs
+
+Rotations and retention policies.
+
+Backups
+
+Regular snapshots for:
+
+Postgres databases.
+
+Config files.
+
+AI indexes (if needed).
+
+Clear restore procedure:
+
+Restore from backup.
+
+Rebuild indexes if required.
+
+Resource Management
+
+Limit per-tenant:
+
+Disk usage.
+
+Requests per second.
+
+AI quota.
+
+Provide system-wide:
+
+Max memory usage for AI.
+
+Max concurrency.
+
+Deployment and Upgrades
+
+Safe upgrade path:
+
+Deploy new binary.
+
+Keep ability to rollback.
+
+Version awareness:
+
+Know which schema / config versions are in play.
+
+5. Data Model and Multi-Tenancy
+
+At the heart of NIFDU’s persistent state is PostgreSQL (with pgvector where needed).
+
+5.1 Core Entities (Conceptual)
+
+User
+
+Identity of a human or organization.
+
+Has:
+
+Login credentials or auth tokens.
+
+Contact details.
+
+Billing profile.
+
+Tenant / Account
+
+Represents a logical account (company, team).
+
+A user may belong to multiple tenants.
+
+Tenants own:
+
+Projects
+
+Domains
+
+Billing records.
+
+Project
+
+Captures a single app/site being built.
+
+Contains:
+
+Human-written brief.
+
+AI-generated blueprint.
+
+Templates and layout definitions.
+
+Content (copy, structured text).
+
+Build status and history.
+
+Associated domains and deployments.
+
+Deployment
+
+A specific instance of a project:
+
+At a given time.
+
+At a given domain or subdomain.
+
+Tracks:
+
+Deployed commit / artifact ID.
+
+Status (pending, active, rolled back).
+
+Timestamps and logs.
+
+Domain
+
+DNS name:
+
+Example: myapp.com, shop.nifdu.com.
+
+Linked to:
+
+One or more deployments.
+
+Holds:
+
+ACME / TLS information.
+
+DNS verification metadata.
+
+Usage / Billing
+
+Aggregated metrics:
+
+Requests served.
+
+Storage used.
+
+AI tokens consumed.
+
+Used to:
+
+Enforce limits.
+
+Generate invoices.
+
+Vector Entries
+
+For RAG:
+
+Chunks of text (docs, prompts, design notes).
+
+Associated metadata (project, tenant, time).
+
+Stored in pgvector and used by NifduDroid.
+
+5.2 Isolation
+
+Every query must be explicitly tenant-aware:
+
+No “global SELECT * FROM projects” without tenant constraints.
+
+All mutating actions should:
+
+Validate ownership.
+
+Enforce permission checks.
+
+This is non-negotiable for security and correctness.
+
+6. Key Flows — From Idea to Live Site
+
+To align the entire team, we formalize the main flows.
+
+6.1 New Project Creation
+
+User opens Studio (/studio/).
+
+Studio displays a form:
+
+“Describe the site or app you want.”
+
+Optional fields: industry, design preferences, pages, etc.
+
+User submits.
+
+NifduStack:
+
+Creates project record in DB.
+
+Stores initial human brief.
+
+Constructs AI prompt.
+
+NifduDroid:
+
+Processes the brief.
+
+Uses RAG to find similar previous projects and patterns.
+
+Generates:
+
+Project blueprint.
+
+Proposed pages and layout.
+
+Returns structured representation.
+
+NifduStack:
+
+Saves blueprint.
+
+Invokes NifduRender to:
+
+Generate initial preview HTML.
+
+User is redirected to:
+
+/studio/preview?project_id=…
+
+The result: a first draft app appears with minimal user effort.
+
+6.2 Preview and Iteration
+
+In preview mode:
+
+User can:
+
+See how the site looks.
+
+Provide feedback (text adjustments, more pages, different color tone).
+
+NifduStack:
+
+Takes feedback.
+
+Creates new AI prompts including:
+
+Last blueprint.
+
+User feedback.
+
+NifduDroid:
+
+Refines blueprint and content.
+
+NifduRender:
+
+Generates updated HTML.
+
+Process can repeat until user is satisfied.
+
+All intermediate versions should be:
+
+Stored or at least summarised.
+
+Accessible via project history.
+
+6.3 Deploy
+
+Once the user clicks “Deploy”:
+
+NifduStack checks:
+
+Whether the user wants:
+
+A subdomain (myapp.nifdu.com) or
+
+A custom domain (myapp.com).
+
+If subdomain:
+
+Allocate a subdomain under a NIFDU-controlled zone.
+
+No external domain API integration required.
+
+If custom domain:
+
+Use NifduTools to:
+
+Validate domain ownership.
+
+Possibly purchase or configure DNS.
+
+NifduOps / NifduServe:
+
+Configure mapping host → webroot.
+
+Trigger ACME certificate issuance.
+
+NifduRender / packaging:
+
+Write final HTML to webroot.
+
+Optionally include static assets, images, CSS.
+
+Deployment record:
+
+Created or updated with:
+
+Domain
+
+Status
+
+Timestamps
+
+Any relevant logs.
+
+From this moment, HTTP requests to the chosen domain will:
+
+Hit NifduServe.
+
+Be routed to the newly deployed site.
+
+7. Security Model
+
+Security is not optional “hardening” at the end. It is a design axis.
+
+7.1 Web Security
+
+HTTP:
+
+Redirect all non-ACME HTTP traffic on port 80 to HTTPS, once certificates exist.
+
+Cookies:
+
+Mark session cookies as HttpOnly and Secure.
+
+Templates:
+
+Escape user-supplied content when rendering.
+
+Avoid injection points in HTML.
+
+7.2 Multi-Tenant Security
+
+All DB queries must be tenant-scoped.
+
+File system:
+
+Per-tenant project directories (where needed).
+
+Permissions to ensure one tenant cannot read another’s files.
+
+7.3 Operational Security
+
+Limit network exposure:
+
+Only required ports open (80, 443, admin where appropriate).
+
+TLS:
+
+Use modern cipher suites.
+
+Maintain strong defaults.
+
+7.4 AI Safety (Scope-Appropriate)
+
+NifduDroid is mostly used for code and layout generation.
+
+The main safety concerns:
+
+Avoid generating malicious HTML structures that could be abused.
+
+Avoid referencing external scripts or remote trackers.
+
+8. Operations, Monitoring, and Reliability
+
+NIFDU is expected to be:
+
+Always-on.
+
+Predictable.
+
+Easy to recover.
+
+8.1 Logging
+
+There should be separate logical streams for:
+
+Access logs:
+
+One line per request.
+
+Error logs:
+
+Stack traces, internal errors.
+
+AI logs:
+
+Prompts, truncated responses, timings.
+
+ACME/TLS logs:
+
+Certificate events.
+
+DB logs (optional or via Postgres):
+
+Slow queries, connection issues.
+
+Logs must:
+
+Include timestamps.
+
+Use consistent formats.
+
+Be rotated and compressed to avoid disk exhaustion.
+
+8.2 Health and Monitoring
+
+Expose endpoints such as:
+
+/healthz:
+
+Check:
+
+NIFDU process health.
+
+DB connectivity.
+
+/readyz:
+
+Additionally check:
+
+AI engines ready.
+
+Essential background tasks.
+
+These can be monitored by external tools or Windows services.
+
+8.3 Backups and Disaster Recovery
+
+Standard expectations:
+
+Regular DB dumps.
+
+Config backup (nifdu.toml, etc.).
+
+Snapshotting of:
+
+projects metadata.
+
+Deployed sites roots.
+
+Restoration must be documented in a simple sequence like:
+
+Restore DB backup.
+
+Restore sites and projects directories.
+
+Restart NIFDU.
+
+Optionally rebuild vector indexes.
+
+9. Versioning and Roadmap
+9.1 v1.0 — “Root”
+
+Scope:
+
+Single machine, Windows-first.
+
+Basic hosting:
+
+Core HTTP/TLS.
+
+A single NIFDU Studio instance.
+
+Local AI with 1–2 models.
+
+Basic RAG for design.
+
+Single-tenant or limited multi-tenant.
+
+Simple subdomain deployments.
+
+9.2 v1.5 — “Branch”
+
+Scope:
+
+Mature multi-tenant support.
+
+Stronger ACME automation.
+
+Domain + DNS integration for custom domains.
+
+Usage and quota tracking.
+
+Better Studio UX:
+
+Project history
+
+Iteration flows
+
+More robust AI flows:
+
+Multi-pass generations
+
+More templates and patterns.
+
+9.3 v2.0 — “Forest”
+
+Scope:
+
+Full multi-tenant, full billing integration:
+
+Stripe or equivalent.
+
+Programmatic API:
+
+Users or partners can integrate via API to drive NIFDU from external systems.
+
+Packaging flows:
+
+Desktop and mobile app generation.
+
+Templates marketplace:
+
+Reusable designs and kits.
+
+Advanced NifduDroid:
+
+Larger local models.
+
+More sophisticated RAG base.
+
+10. Engineering Guidelines for Contributors
+
+To keep NIFDU coherent:
+
+Respect the C++ monolith:
+
+New features should extend the existing core, not circumvent it.
+
+Preserve HTML-only UI:
+
+No creeping JS frameworks in Studio or NIFDU’s own surfaces.
+
+Guard performance:
+
+Profiling and sanity checks when adding heavy operations.
+
+Be careful with synchronous operations in the hot path.
+
+Keep logs meaningful:
+
+Strong messages on errors.
+
+Avoid overlogging success cases.
+
+Write with future maintainers in mind:
+
+Clear separation of concerns among NifduServe, Stack, Render, etc.
+
+Keep internal interfaces well-defined.
+
+11. Product Vision Summary
+
+NIFDU aims to become:
+
+A local software creation OS, where:
+
+Any reasonably modern Windows machine can host:
+
+Multiple companies
+
+Hundreds of sites
+
+Their associated AI workflows
+
+A tool for non-technical entrepreneurs, giving them:
+
+A way to say “I want X” and have it deployed quickly.
+
+A platform for technical power users:
+
+Inline with C++ speed and control.
+
+Without the burden of managing dozens of services.
+
+NIFDU’s promise is that:
+
+The gap between “idea in my head” and “live software used by others” shrinks dramatically.
+
+The infrastructure is not a maze of cloud resources and YAML files, but instead:
+
+A single executable
+
+A handful of configs
+
+A clear mental model.

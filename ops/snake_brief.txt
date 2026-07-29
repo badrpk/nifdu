@@ -1,0 +1,3 @@
+Build a public Snake game portal that is minimalist, secure,
+and mobile-first. Include a high-score API endpoint stub and
+keep the code clean enough to showcase as a NIFDU demo.

@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "domain": "sophyane.com",
+  "ui": {
+    "kind": "next",
+    "appDir": "C:\\nifdu\\src\\apps\\sophyane_live",
+    "start": {
+      "env": {
+        "PORT": "3000"
+      },
+      "exe": "node",
+      "args": [
+        "node_modules\\next\\dist\\bin\\next",
+        "dev"
+      ]
+    },
+    "port": 3000
+  },
+  "api": {
+    "kind": "nifdu",
+    "start": {
+      "env": {},
+      "exe": "C:\\nifdu\\build\\Release\\nifdu.exe",
+      "args": []
+    },
+    "port": 8000
+  },
+  "preview": {
+    "upstream": "127.0.0.1:3000",
+    "stripPrefix": "/apps/vibe/preview",
+    "path": "/apps/vibe/preview"
+  },
+  "proxyApis": {
+    "reload": "http://127.0.0.1/api/proxy/reload",
+    "routes": "http://127.0.0.1/api/proxy/routes"
+  },
+  "watchdog": {
+    "everyMs": 2000
+  }
+}

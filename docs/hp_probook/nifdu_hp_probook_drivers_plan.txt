@@ -1,0 +1,67 @@
+NIFDU OS — HP PROBOOK DRIVER PLAN
+=================================
+
+Goal: when NIFDU OS boots natively on HP ProBook, all core components
+(CPU, GPU, storage, memory, keyboard, mouse, screen, USB) behave as a
+first-class AI workstation and GUI platform.
+
+DRIVER DOMAINS AND TODOs
+-------------------------
+
+1) CPU Scheduler and Power Management
+   - Implement core enumeration.
+   - Implement basic round-robin or priority scheduler.
+   - Add awareness of performance vs efficiency cores where available.
+   - Integrate with power states and future energy policies.
+
+2) Memory Manager
+   - Physical page allocator.
+   - Virtual memory and page tables.
+   - Zero-copy buffers for AI workloads and GPU transfers.
+
+3) Storage Driver
+   - Basic block device driver for internal SSD.
+   - Simple filesystem (read-only initially) for NIFDU OS volume.
+   - Later: journaling filesystem with crash recovery.
+
+4) GPU / Graphics Driver
+   - Seed phase: GOP framebuffer (already used by nifdu_gui_shell.cpp).
+   - Roadmap:
+     * Mode enumeration and selection.
+     * Framebuffer flush and vsync strategies.
+     * Eventually: command buffer submission for compute and 2D/3D.
+
+5) Keyboard Input
+   - Seed phase: UEFI console key input only (ReadKeyStroke).
+   - Roadmap:
+     * Native PS/2 or HID driver for laptop keyboard.
+     * Map key events into NIFDU shell event queue.
+
+6) Mouse / Touchpad
+   - Seed phase: none (cursor not yet visible).
+   - Roadmap:
+     * Implement Simple Pointer or HID pointer driver.
+     * Draw cursor in framebuffer.
+     * Hit-testing for windows and NIFDU Browser button.
+
+7) USB Host Controller
+   - Seed phase: UEFI firmware handles USB for booting from USB.
+   - Roadmap:
+     * Native xHCI driver in NIFDU OS.
+     * Mass storage and HID device drivers.
+
+8) Laptop Screen / Panel
+   - Seed phase: handled via GOP framebuffer.
+   - Roadmap:
+     * Native driver with power management and backlight control.
+
+9) NIFDU Browser App Integration
+   - The GUI seed reserves a green button area inside the main window.
+   - When full input stack is ready, clicking this region should:
+     * Launch the NIFDU browser application.
+     * Connect to local NIFDU HTTP/AI services for UI rendering.
+
+Tracking:
+   - This file is a living document; update as each driver moves
+     from seed -> experimental -> stable.
+
