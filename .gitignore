@@ -183,3 +183,56 @@ src/Caddyfile
 src/LICENSE
 src/README.md
 src/CMakeLists.txt
+
+# Build outputs
+/build/
+/build_*/
+/cmake-build-*/
+/bin/
+*.o
+*.obj
+*.a
+*.so
+*.dll
+*.exe
+*.pdb
+
+# Local models and large generated assets
+/models/
+/ffmpeg/
+/av_clips/
+/av_frame_demo/
+
+# Runtime state
+/logs/
+/data/
+/conversation_history.json
+/last_build_path.txt
+/retail_http_meta.json
+/router_extract.txt
+/router_snippet_B.txt
+
+# Certificates and credentials
+/certs/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+.env
+.env.*
+
+# Recovery and quarantine
+/_quarantine_*/
+/_quarantine_root_fix_*/
+*.bak*
+*.pre-*
+*.damaged_*
+*.old
+*~
+
+# IDE and caches
+.vscode/
+.idea/
+__pycache__/
+.pytest_cache/
