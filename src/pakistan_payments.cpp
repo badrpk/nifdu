@@ -12,7 +12,7 @@ namespace nifdu {
 
 PakistanPaymentEngine::PakistanPaymentEngine() {
     m_jazzcash_merchant_id = "MC_NIFDU_01";
-    m_jazzcash_password = "vault_password";
+    m_jazzcash_password = ""  /* set via env/config, never commit secrets */;
     m_jazzcash_hash_key = "vault_hash_key";
     m_easypaisa_store_id = "EP_STORE_99";
     m_easypaisa_hash_key = "ep_hash_key";
