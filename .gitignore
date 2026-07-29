@@ -236,3 +236,5 @@ src/CMakeLists.txt
 .idea/
 __pycache__/
 .pytest_cache/
+*.backup.*
+*backup*
