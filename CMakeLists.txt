@@ -36,6 +36,7 @@ add_executable(
     src/federated_sync.cpp
     src/grok_client.cpp
     src/neuron_engine.cpp
+    src/spiking_weight_importer.cpp
 )
 
 target_link_libraries(
@@ -54,6 +55,7 @@ add_executable(
     src/simd_data_engine.cpp
     src/postgres_store.cpp
     src/neuron_engine.cpp
+    src/spiking_weight_importer.cpp
 )
 
 target_link_libraries(
@@ -66,6 +68,7 @@ add_executable(
     test_million_neuron_loops
     tests/benchmark_million_neuron_loops.cpp
     src/neuron_engine.cpp
+    src/spiking_weight_importer.cpp
 )
 
 target_link_libraries(
@@ -78,6 +81,7 @@ add_executable(
     test_compare_spiking_llm_vs_dense_transformer
     tests/test_compare_spiking_llm_vs_dense_transformer.cpp
     src/neuron_engine.cpp
+    src/spiking_weight_importer.cpp
 )
 
 target_link_libraries(
@@ -90,6 +94,7 @@ add_executable(
     test_stdp_spiking_llm_training
     tests/test_stdp_spiking_llm_training.cpp
     src/neuron_engine.cpp
+    src/spiking_weight_importer.cpp
 )
 
 target_link_libraries(
@@ -102,6 +107,7 @@ add_executable(
     test_neuron_capabilities
     tests/test_neuron_capabilities.cpp
     src/neuron_engine.cpp
+    src/spiking_weight_importer.cpp
 )
 
 target_link_libraries(
@@ -114,6 +120,7 @@ add_executable(
     test_4_frameworks_10_tasks_benchmark
     tests/test_4_frameworks_10_tasks_benchmark.cpp
     src/neuron_engine.cpp
+    src/spiking_weight_importer.cpp
     src/simd_data_engine.cpp
 )
 

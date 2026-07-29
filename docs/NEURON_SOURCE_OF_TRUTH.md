@@ -1,12 +1,16 @@
 # Neuron source of truth
 
-Spiking / LIF / STDP implementation lives in:
-  https://github.com/badrpk/neuron  (local: /home/badrpk/neuron_repo)
+Authoritative SNN / STDP implementation:
+  https://github.com/badrpk/neuron
 
-NIFDU must not keep a second full copy of the same sources.
-Integration options:
-  1. Link/call Neuron binary (SOPHYANE_NEURON_BIN / test_neuron_capabilities)
-  2. Optional CMake FetchContent / submodule of badrpk/neuron
-  3. Thin adapter only inside nifdu (no duplicated engine bodies)
+NIFDU keeps **compatibility copies** of:
+- `src/spiking_weight_importer.cpp`
+- `include/nifdu/spiking_weight_importer.hpp`
 
-Priority if files were identical: keep Neuron, drop NIFDU copy.
+These are refreshed from Neuron when content matches. They exist only so NIFDU
+tests/targets that `#include "nifdu/spiking_weight_importer.hpp"` still build.
+
+Migration (unique ownership):
+1. Neuron exports a CMake library target.
+2. NIFDU links that library.
+3. NIFDU drops the compatibility copies.
