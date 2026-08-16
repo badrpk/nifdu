@@ -1,0 +1,19 @@
+{
+  "schema": "sophyane-ecosystem-v1",
+  "component": "nifdu",
+  "role": "screenshot-loop-harness",
+  "capabilities": ["harness", "screenshot-loop", "visual-verification", "browser-loop", "agent-loop", "native-tools"],
+  "peers": {
+    "shmry": "cloud-email-server",
+    "xerus": "disk-first-memory",
+    "vps": "webserver",
+    "huobzlang": "highest-level-language",
+    "neuron": "biological-intelligence",
+    "sophyane": "multi-option-harness"
+  },
+  "routing": {
+    "policy": "request-peer-capability-when-local-capability-is-missing",
+    "transport": ["local-process", "http-json", "https-json"],
+    "fallback": "return-explicit-capability-unavailable"
+  }
+}
