@@ -18,6 +18,7 @@ find_package(Threads REQUIRED)
 set(
     NIFDU_CORE_SOURCES
     src/agent3.cpp
+    src/evidence_manifest.cpp
     src/http_server.cpp
     src/lang_adapter.cpp
     src/lang_graph.cpp
@@ -79,3 +80,19 @@ target_link_libraries(
 )
 
 include(CTest)
+
+if(BUILD_TESTING)
+    add_executable(
+        nifdu_evidence_manifest_test
+        tests/test_evidence_manifest.cpp
+    )
+    target_link_libraries(
+        nifdu_evidence_manifest_test
+        PRIVATE
+            nifdu_core
+    )
+    add_test(
+        NAME nifdu_evidence_manifest
+        COMMAND nifdu_evidence_manifest_test
+    )
+endif()
