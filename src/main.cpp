@@ -183,6 +183,88 @@ bool command_exists(const std::string& command) {
     return std::system(check.c_str()) == 0;
 }
 
+HttpResponse post_json_once(
+    const std::string& url,
+    const std::string& api_key,
+    const std::string& body
+);
+
+bool retryable_gemini_response(
+    const HttpResponse& response
+) {
+    if (
+        response.status == 429 ||
+        response.status == 500 ||
+        response.status == 502 ||
+        response.status == 503 ||
+        response.status == 504
+    ) {
+        return true;
+    }
+
+    const std::string message =
+        lower(response.body + " " + response.error);
+
+    return (
+        message.find("high demand") != std::string::npos ||
+        message.find("temporarily unavailable") != std::string::npos ||
+        message.find("resource exhausted") != std::string::npos ||
+        message.find("rate limit") != std::string::npos ||
+        message.find("try again later") != std::string::npos
+    );
+}
+
+
+HttpResponse post_json(
+    const std::string& url,
+    const std::string& api_key,
+    const std::string& body
+) {
+    constexpr int MAX_GEMINI_ATTEMPTS = 5;
+
+    HttpResponse last;
+
+    for (
+        int attempt = 1;
+        attempt <= MAX_GEMINI_ATTEMPTS;
+        ++attempt
+    ) {
+        last = post_json_once(
+            url,
+            api_key,
+            body
+        );
+
+        if (!retryable_gemini_response(last)) {
+            return last;
+        }
+
+        if (attempt == MAX_GEMINI_ATTEMPTS) {
+            break;
+        }
+
+        const int delay_seconds =
+            1 << (attempt - 1);
+
+        std::cerr
+            << "[NIFDU] Gemini transient failure; retry "
+            << attempt
+            << "/"
+            << MAX_GEMINI_ATTEMPTS
+            << " after "
+            << delay_seconds
+            << "s\n";
+
+        std::this_thread::sleep_for(
+            std::chrono::seconds(delay_seconds)
+        );
+    }
+
+    return last;
+}
+
+
+
 std::string find_chromium() {
     const std::vector<std::string> candidates = {
         env("NIFDU_CHROMIUM"),
@@ -223,7 +305,7 @@ std::size_t write_callback(
     return bytes;
 }
 
-HttpResponse post_json(
+HttpResponse post_json_once(
     const std::string& url,
     const std::string& api_key,
     const std::string& body
