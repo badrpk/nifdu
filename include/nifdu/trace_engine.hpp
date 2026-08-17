@@ -1,5 +1,5 @@
-#ifndef NIFDU_LANG_SMITH_HPP
-#define NIFDU_LANG_SMITH_HPP
+#ifndef NIFDU_TRACE_ENGINE_HPP
+#define NIFDU_TRACE_ENGINE_HPP
 
 #include <nlohmann/json.hpp>
 #include <string>
@@ -46,9 +46,9 @@ struct EvalResult {
     json detailed_scores;
 };
 
-class LangSmithTracer {
+class NifduTraceEngine {
 public:
-    static LangSmithTracer& instance();
+    static NifduTraceEngine& instance();
 
     std::string start_trace(const std::string& session_id, const std::string& root_name, const json& inputs);
     std::string start_span(const std::string& trace_id, const std::string& span_name, const std::string& parent_span_id = "", const json& inputs = {});
@@ -63,11 +63,11 @@ public:
     EvalResult run_benchmark(const std::string& dataset_id, std::function<json(const json& input)> target_fn);
 
 private:
-    LangSmithTracer() = default;
+    NifduTraceEngine() = default;
     std::map<std::string, ExecutionTrace> traces_;
     std::map<std::string, std::vector<EvalDatasetExample>> datasets_;
 };
 
 } // namespace nifdu
 
-#endif // NIFDU_LANG_SMITH_HPP
+#endif // NIFDU_TRACE_ENGINE_HPP

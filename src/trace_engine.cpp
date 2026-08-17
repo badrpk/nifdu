@@ -1,15 +1,15 @@
-#include "nifdu/lang_smith.hpp"
+#include "nifdu/trace_engine.hpp"
 #include <ctime>
 #include <sstream>
 
 namespace nifdu {
 
-LangSmithTracer& LangSmithTracer::instance() {
-    static LangSmithTracer tracer;
+NifduTraceEngine& NifduTraceEngine::instance() {
+    static NifduTraceEngine tracer;
     return tracer;
 }
 
-std::string LangSmithTracer::start_trace(const std::string& session_id, const std::string& root_name, const json& inputs) {
+std::string NifduTraceEngine::start_trace(const std::string& session_id, const std::string& root_name, const json& inputs) {
     auto now = std::chrono::system_clock::now();
     std::time_t time = std::chrono::system_clock::to_time_t(now);
     std::stringstream ss;
@@ -32,7 +32,7 @@ std::string LangSmithTracer::start_trace(const std::string& session_id, const st
     return trace_id;
 }
 
-std::string LangSmithTracer::start_span(const std::string& trace_id, const std::string& span_name, const std::string& parent_span_id, const json& inputs) {
+std::string NifduTraceEngine::start_span(const std::string& trace_id, const std::string& span_name, const std::string& parent_span_id, const json& inputs) {
     if (!traces_.count(trace_id)) return "";
 
     auto now = std::chrono::system_clock::now();
@@ -49,7 +49,7 @@ std::string LangSmithTracer::start_span(const std::string& trace_id, const std::
     return span.span_id;
 }
 
-void LangSmithTracer::end_span(const std::string& trace_id, const std::string& span_id, const json& outputs, int prompt_tokens, int completion_tokens) {
+void NifduTraceEngine::end_span(const std::string& trace_id, const std::string& span_id, const json& outputs, int prompt_tokens, int completion_tokens) {
     if (!traces_.count(trace_id)) return;
 
     for (auto& span : traces_[trace_id].spans) {
@@ -64,13 +64,13 @@ void LangSmithTracer::end_span(const std::string& trace_id, const std::string& s
     }
 }
 
-void LangSmithTracer::end_trace(const std::string& trace_id, const std::string& status) {
+void NifduTraceEngine::end_trace(const std::string& trace_id, const std::string& status) {
     if (traces_.count(trace_id)) {
         traces_[trace_id].status = status;
     }
 }
 
-json LangSmithTracer::get_trace_tree(const std::string& trace_id) {
+json NifduTraceEngine::get_trace_tree(const std::string& trace_id) {
     if (!traces_.count(trace_id)) return json{{"error", "Trace not found"}};
 
     const auto& trace = traces_[trace_id];
@@ -97,7 +97,7 @@ json LangSmithTracer::get_trace_tree(const std::string& trace_id) {
     return res;
 }
 
-json LangSmithTracer::get_all_traces() {
+json NifduTraceEngine::get_all_traces() {
     json arr = json::array();
     for (const auto& [tid, trace] : traces_) {
         arr.push_back(get_trace_tree(tid));
@@ -105,11 +105,11 @@ json LangSmithTracer::get_all_traces() {
     return arr;
 }
 
-void LangSmithTracer::register_dataset(const std::string& dataset_id, const std::vector<EvalDatasetExample>& examples) {
+void NifduTraceEngine::register_dataset(const std::string& dataset_id, const std::vector<EvalDatasetExample>& examples) {
     datasets_[dataset_id] = examples;
 }
 
-EvalResult LangSmithTracer::run_benchmark(const std::string& dataset_id, std::function<json(const json& input)> target_fn) {
+EvalResult NifduTraceEngine::run_benchmark(const std::string& dataset_id, std::function<json(const json& input)> target_fn) {
     EvalResult result;
     result.dataset_id = dataset_id;
 

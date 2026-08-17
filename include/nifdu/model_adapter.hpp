@@ -1,5 +1,5 @@
-#ifndef NIFDU_LANG_ADAPTER_HPP
-#define NIFDU_LANG_ADAPTER_HPP
+#ifndef NIFDU_MODEL_ADAPTER_HPP
+#define NIFDU_MODEL_ADAPTER_HPP
 
 #include <nlohmann/json.hpp>
 #include <string>
@@ -67,4 +67,4 @@ private:
 
 } // namespace nifdu
 
-#endif // NIFDU_LANG_ADAPTER_HPP
+#endif // NIFDU_MODEL_ADAPTER_HPP

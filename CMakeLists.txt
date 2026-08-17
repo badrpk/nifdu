@@ -20,9 +20,9 @@ set(
     src/agent3.cpp
     src/evidence_manifest.cpp
     src/http_server.cpp
-    src/lang_adapter.cpp
-    src/lang_graph.cpp
-    src/lang_smith.cpp
+    src/model_adapter.cpp
+    src/workflow_graph.cpp
+    src/trace_engine.cpp
     src/realtime.cpp
     src/telemetry.cpp
 )
