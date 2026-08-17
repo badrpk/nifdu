@@ -1545,6 +1545,366 @@ void print_report(
         << "\n";
 }
 
+json cosmos_post_build_request(
+    const std::string& user_request,
+    const fs::path& workspace,
+    const fs::path& product_file,
+    const Evaluation& evaluation
+) {
+    const std::string cosmos_url = env(
+        "NIFDU_COSMOS_URL",
+        "http://127.0.0.1:8787/api/request"
+    );
+
+    json payload = {
+        {"request", user_request},
+        {"source", "nifdu"},
+        {"mode", "post_build"},
+        {
+            "context",
+            {
+                {"workspace", workspace.string()},
+                {"product", product_file.string()},
+                {"product_type", "web"},
+                {"accepted", evaluation.accepted},
+                {"score", evaluation.score},
+                {"critical_issues", evaluation.critical_issues},
+                {"unmet_requirements", evaluation.unmet_requirements},
+                {"summary", evaluation.summary}
+            }
+        },
+        {
+            "routing_policy",
+            {
+                {"control_plane", "cosmos"},
+                {"use_ecosystem_capabilities", true},
+                {"semantic_escalation", true},
+                {"ask_clarification_when_ambiguous", true},
+                {"preserve_canonical_repo_ownership", true}
+            }
+        }
+    };
+
+    CURL* curl = curl_easy_init();
+
+    if (!curl) {
+        throw std::runtime_error(
+            "Unable to initialize Cosmos HTTP client"
+        );
+    }
+
+    std::string response_body;
+    char error_buffer[CURL_ERROR_SIZE] = {};
+    curl_slist* headers = nullptr;
+
+    headers = curl_slist_append(
+        headers,
+        "Content-Type: application/json"
+    );
+
+    const std::string body = payload.dump();
+
+    curl_easy_setopt(
+        curl,
+        CURLOPT_URL,
+        cosmos_url.c_str()
+    );
+    curl_easy_setopt(
+        curl,
+        CURLOPT_HTTPHEADER,
+        headers
+    );
+    curl_easy_setopt(
+        curl,
+        CURLOPT_POST,
+        1L
+    );
+    curl_easy_setopt(
+        curl,
+        CURLOPT_POSTFIELDS,
+        body.c_str()
+    );
+    curl_easy_setopt(
+        curl,
+        CURLOPT_POSTFIELDSIZE,
+        static_cast<long>(body.size())
+    );
+    curl_easy_setopt(
+        curl,
+        CURLOPT_WRITEFUNCTION,
+        write_callback
+    );
+    curl_easy_setopt(
+        curl,
+        CURLOPT_WRITEDATA,
+        &response_body
+    );
+    curl_easy_setopt(
+        curl,
+        CURLOPT_CONNECTTIMEOUT,
+        CONNECT_TIMEOUT_SECONDS
+    );
+    curl_easy_setopt(
+        curl,
+        CURLOPT_TIMEOUT,
+        REQUEST_TIMEOUT_SECONDS
+    );
+    curl_easy_setopt(
+        curl,
+        CURLOPT_ERRORBUFFER,
+        error_buffer
+    );
+
+    const CURLcode result = curl_easy_perform(curl);
+
+    long status = 0;
+    curl_easy_getinfo(
+        curl,
+        CURLINFO_RESPONSE_CODE,
+        &status
+    );
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (result != CURLE_OK) {
+        throw std::runtime_error(
+            std::string(
+                "Cosmos request failed: "
+            ) +
+            (
+                *error_buffer
+                    ? error_buffer
+                    : curl_easy_strerror(result)
+            )
+        );
+    }
+
+    if (status < 200 || status >= 300) {
+        throw std::runtime_error(
+            "Cosmos returned HTTP " +
+            std::to_string(status) +
+            ": " +
+            response_body
+        );
+    }
+
+    try {
+        return json::parse(response_body);
+    } catch (...) {
+        return {
+            {"ok", true},
+            {"raw", response_body}
+        };
+    }
+}
+
+
+std::string cosmos_response_text(
+    const json& response
+) {
+    const std::vector<std::string> preferred = {
+        "answer",
+        "message",
+        "summary",
+        "result",
+        "output"
+    };
+
+    for (const auto& key : preferred) {
+        if (
+            response.contains(key) &&
+            response[key].is_string()
+        ) {
+            const std::string value =
+                trim(response[key].get<std::string>());
+
+            if (!value.empty()) {
+                return value;
+            }
+        }
+    }
+
+    if (
+        response.contains("task") &&
+        response["task"].is_object()
+    ) {
+        const json& task = response["task"];
+
+        for (const auto& key : preferred) {
+            if (
+                task.contains(key) &&
+                task[key].is_string()
+            ) {
+                const std::string value =
+                    trim(task[key].get<std::string>());
+
+                if (!value.empty()) {
+                    return value;
+                }
+            }
+        }
+    }
+
+    return response.dump(2);
+}
+
+
+bool is_post_build_exit(
+    const std::string& input
+) {
+    const std::string command =
+        lower(trim(input));
+
+    return (
+        command == "exit" ||
+        command == "quit" ||
+        command == "/exit" ||
+        command == "/quit"
+    );
+}
+
+
+void run_post_build_session(
+    const fs::path& workspace,
+    const fs::path& product_file,
+    const Evaluation& evaluation
+) {
+    const fs::path transcript =
+        workspace / "post-build-session.jsonl";
+
+    std::cout
+        << "\nNIFDU post-build session\n"
+        << "────────────────────────\n"
+        << "Your accepted product remains live.\n"
+        << "Cosmos will route each next instruction to the "
+        << "appropriate ecosystem capability/repository.\n"
+        << "If the request is ambiguous, Cosmos may use semantic "
+        << "intelligence/ontology or ask for clarification.\n\n"
+        << "Examples:\n"
+        << "  publish this website\n"
+        << "  make it an Android app\n"
+        << "  add a backend API\n"
+        << "  improve the design\n"
+        << "  add payments\n\n"
+        << "Type exit or quit when finished.\n";
+
+    while (true) {
+        std::cout
+            << "\nNIFDU ❯ "
+            << std::flush;
+
+        std::string input;
+
+        if (!std::getline(std::cin, input)) {
+            break;
+        }
+
+        input = trim(input);
+
+        if (input.empty()) {
+            continue;
+        }
+
+        if (is_post_build_exit(input)) {
+            json event = {
+                {"type", "session_exit"},
+                {"input", input}
+            };
+
+            std::ofstream output(
+                transcript,
+                std::ios::app
+            );
+
+            output
+                << event.dump()
+                << '\n';
+
+            break;
+        }
+
+        json request_event = {
+            {"type", "user_request"},
+            {"input", input}
+        };
+
+        {
+            std::ofstream output(
+                transcript,
+                std::ios::app
+            );
+
+            output
+                << request_event.dump()
+                << '\n';
+        }
+
+        try {
+            std::cout
+                << "[COSMOS] Routing request through ecosystem...\n";
+
+            const json response =
+                cosmos_post_build_request(
+                    input,
+                    workspace,
+                    product_file,
+                    evaluation
+                );
+
+            json response_event = {
+                {"type", "cosmos_response"},
+                {"response", response}
+            };
+
+            {
+                std::ofstream output(
+                    transcript,
+                    std::ios::app
+                );
+
+                output
+                    << response_event.dump()
+                    << '\n';
+            }
+
+            std::cout
+                << "\n"
+                << cosmos_response_text(response)
+                << "\n";
+
+        } catch (const std::exception& error) {
+            json failure = {
+                {"type", "cosmos_error"},
+                {"error", error.what()}
+            };
+
+            {
+                std::ofstream output(
+                    transcript,
+                    std::ios::app
+                );
+
+                output
+                    << failure.dump()
+                    << '\n';
+            }
+
+            std::cout
+                << "[COSMOS] Unable to complete routing: "
+                << error.what()
+                << "\n"
+                << "The NIFDU session remains open. "
+                << "You can retry or type quit.\n";
+        }
+    }
+
+    std::cout
+        << "\nSaving session...\n"
+        << "Stopping preview...\n";
+}
+
+
 void print_usage() {
     std::cout
         << "NIFDU C++ Visual Product Supervisor 2.0\n\n"
@@ -1899,11 +2259,20 @@ int main(int argc, char* argv[]) {
             std::to_string(g_server_port)
         );
 
-        std::cout
-            << "Press Enter to stop the preview server.\n";
+        if (latest.accepted) {
+            run_post_build_session(
+                workspace,
+                product_directory / "index.html",
+                latest
+            );
+        } else {
+            std::cout
+                << "Product was not accepted. "
+                << "Press Enter to stop the preview server.\n";
 
-        std::string line;
-        std::getline(std::cin, line);
+            std::string line;
+            std::getline(std::cin, line);
+        }
 
         server.stop();
 
