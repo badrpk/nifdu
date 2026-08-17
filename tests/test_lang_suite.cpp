@@ -1,6 +1,6 @@
-#include "nifdu/lang_adapter.hpp"
-#include "nifdu/lang_graph.hpp"
-#include "nifdu/lang_smith.hpp"
+#include "nifdu/model_adapter.hpp"
+#include "nifdu/workflow_graph.hpp"
+#include "nifdu/trace_engine.hpp"
 #include <iostream>
 #include <cassert>
 
@@ -88,7 +88,7 @@ int main() {
     // ----------------------------------------------------
     std::cout << "\n--- PART 3: LANGSMITH PARITY ---\n" << std::flush;
 
-    auto& tracer = nifdu::LangSmithTracer::instance();
+    auto& tracer = nifdu::NifduTraceEngine::instance();
 
     // Test 7: Trace Tree & Latency/Token Metric Spans
     std::string trace_id = tracer.start_trace("session_smith_01", "root_chain", {{"input", "Generate API"}});

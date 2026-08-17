@@ -1,4 +1,4 @@
-#include "nifdu/lang_graph.hpp"
+#include "nifdu/workflow_graph.hpp"
 #include <ctime>
 #include <sstream>
 #include <iomanip>

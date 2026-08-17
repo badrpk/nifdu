@@ -1,5 +1,5 @@
-#ifndef NIFDU_LANG_GRAPH_HPP
-#define NIFDU_LANG_GRAPH_HPP
+#ifndef NIFDU_WORKFLOW_GRAPH_HPP
+#define NIFDU_WORKFLOW_GRAPH_HPP
 
 #include <nlohmann/json.hpp>
 #include <string>
@@ -57,4 +57,4 @@ private:
 
 } // namespace nifdu
 
-#endif // NIFDU_LANG_GRAPH_HPP
+#endif // NIFDU_WORKFLOW_GRAPH_HPP

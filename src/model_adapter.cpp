@@ -1,4 +1,4 @@
-#include "nifdu/lang_adapter.hpp"
+#include "nifdu/model_adapter.hpp"
 #include <curl/curl.h>
 #include <sstream>
 #include <iostream>

@@ -4,9 +4,9 @@
 #include "nifdu/agent3.hpp"
 #include "nifdu/telemetry.hpp"
 #include "nifdu/realtime.hpp"
-#include "nifdu/lang_adapter.hpp"
-#include "nifdu/lang_graph.hpp"
-#include "nifdu/lang_smith.hpp"
+#include "nifdu/model_adapter.hpp"
+#include "nifdu/workflow_graph.hpp"
+#include "nifdu/trace_engine.hpp"
 
 #include <nlohmann/json.hpp>
 #include <string>
