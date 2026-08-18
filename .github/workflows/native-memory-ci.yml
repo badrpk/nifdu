@@ -1,0 +1,85 @@
+name: Native memory CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/native-memory-ci.yml"
+      - "CMakeLists.txt"
+      - "include/nifdu/brain_memory.hpp"
+      - "src/brain_memory.cpp"
+      - "src/brain_memory_cli.cpp"
+      - "tests/test_brain_memory.cpp"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/native-memory-ci.yml"
+      - "CMakeLists.txt"
+      - "include/nifdu/brain_memory.hpp"
+      - "src/brain_memory.cpp"
+      - "src/brain_memory_cli.cpp"
+      - "tests/test_brain_memory.cpp"
+
+permissions:
+  contents: read
+
+jobs:
+  native-memory:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            g++ \
+            libcurl4-openssl-dev \
+            nlohmann-json3-dev
+
+      - name: Configure
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build native memory targets
+        run: |
+          cmake \
+            --build build \
+            --target \
+              nifdu_memory_core \
+              nifdu-memory \
+              test_brain_memory \
+            --parallel 2
+
+      - name: Run native memory test
+        run: ./build/test_brain_memory
+
+      - name: Run CLI smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime="$RUNNER_TEMP/nifdu-brain-runtime"
+          rm -rf "$runtime"
+
+          NIFDU_BRAIN_RUNTIME="$runtime" ./build/nifdu-memory status
+          NIFDU_BRAIN_RUNTIME="$runtime" ./build/nifdu-memory queue-query "CI native memory smoke test"
+          status_json="$(NIFDU_BRAIN_RUNTIME="$runtime" ./build/nifdu-memory status)"
+          printf '%s\n' "$status_json"
+
+          python3 - "$status_json" <<'PY'
+import json
+import sys
+
+status = json.loads(sys.argv[1])
+assert status["ok"] is True
+assert status["queued"] == 1
+assert status["events"] == 1
+PY
