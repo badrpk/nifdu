@@ -47,6 +47,48 @@ target_link_libraries(
     Threads::Threads
 )
 
+# Native disk-first / hot-index memory kernel.
+add_library(
+    nifdu_memory_core
+    src/brain_memory.cpp
+)
+
+target_include_directories(
+    nifdu_memory_core
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(
+    nifdu_memory_core
+    PUBLIC
+    nlohmann_json::nlohmann_json
+    Threads::Threads
+)
+
+add_executable(
+    nifdu-memory
+    src/brain_memory_cli.cpp
+)
+
+target_link_libraries(
+    nifdu-memory
+    PRIVATE
+    nifdu_memory_core
+)
+
+add_executable(
+    test_brain_memory
+    tests/test_brain_memory.cpp
+)
+
+target_link_libraries(
+    test_brain_memory
+    PRIVATE
+    nifdu_memory_core
+)
+
+
 add_executable(
     test_100_tasks
     tests/benchmark_100_tasks_self_improvement.cpp

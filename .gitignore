@@ -238,3 +238,8 @@ __pycache__/
 .pytest_cache/
 *.backup.*
 *backup*
+
+# Keep NIFDU public C++ headers tracked.
+!include/
+!include/nifdu/
+!include/nifdu/*.hpp
