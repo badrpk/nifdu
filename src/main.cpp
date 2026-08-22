@@ -1627,6 +1627,77 @@ void print_report(
         << "\n";
 }
 
+void validate_cosmos_response_permissions(
+    const json& response
+) {
+    if (!response.is_object()) {
+        throw std::runtime_error(
+            "Cosmos response must be a JSON object"
+        );
+    }
+
+    if (
+        !response.contains("permissions") ||
+        !response["permissions"].is_object()
+    ) {
+        throw std::runtime_error(
+            "Cosmos response missing valid permissions envelope"
+        );
+    }
+
+    const json& permissions =
+        response["permissions"];
+
+    const std::vector<std::string> required = {
+        "read",
+        "trust",
+        "persist",
+        "execute",
+        "propagate"
+    };
+
+    if (permissions.size() != required.size()) {
+        throw std::runtime_error(
+            "Cosmos permissions envelope has unexpected fields"
+        );
+    }
+
+    for (const auto& key : required) {
+        if (
+            !permissions.contains(key) ||
+            !permissions[key].is_boolean()
+        ) {
+            throw std::runtime_error(
+                "Cosmos permissions envelope has missing or "
+                "non-boolean field: " + key
+            );
+        }
+    }
+
+    if (!permissions["read"].get<bool>()) {
+        throw std::runtime_error(
+            "Cosmos response denied read permission"
+        );
+    }
+
+    const std::vector<std::string> forbidden = {
+        "trust",
+        "persist",
+        "execute",
+        "propagate"
+    };
+
+    for (const auto& key : forbidden) {
+        if (permissions[key].get<bool>()) {
+            throw std::runtime_error(
+                "Cosmos response attempted to grant forbidden "
+                "permission: " + key
+            );
+        }
+    }
+}
+
+
 json cosmos_post_build_request(
     const std::string& user_request,
     const fs::path& workspace,
@@ -1771,14 +1842,22 @@ json cosmos_post_build_request(
         );
     }
 
+    json response;
+
     try {
-        return json::parse(response_body);
-    } catch (...) {
-        return {
-            {"ok", true},
-            {"raw", response_body}
-        };
+        response = json::parse(response_body);
+    } catch (const json::parse_error& error) {
+        throw std::runtime_error(
+            std::string(
+                "Cosmos returned invalid JSON: "
+            ) +
+            error.what()
+        );
     }
+
+    validate_cosmos_response_permissions(response);
+
+    return response;
 }
 
 
